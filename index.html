@@ -4,10 +4,21 @@
 	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 	<link rel="stylesheet" type="text/css" href="https://www.w3schools.com/w3css/4/w3.css">
 	<link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+	<script src="mesh.js"></script>
 	<title>Mesh</title>
 </head>
 <body>
-	<h1>Mesh</h1>
-
+	<div class="w3-container">
+		<h1>Mesh</h1>
+		<p>A graphical neural network simulator</p>
+	</div>
+	<div class="w3-container" style="float:left;">
+		<button id="addCell" onclick="addCell()" class="w3-button w3-black">Add Cell</button>
+	</div>
+	<div class="w3-container" style="margin-left:200px;">
+		<canvas id="workspace" class="w3-border" width="500" height="500"></canvas>
+	</div>
+	<div id="debugspace">
+	</div>
 </body>
 </html>
