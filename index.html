@@ -13,7 +13,7 @@
 	<title>Mesh</title>
 </head>
 <body>
-	<div id="mousecoords" style="position:absolute; top:0; width:100%; text-align:center;"></div>
+	<div id="mousecoords" class="w3-container" style="position:absolute; top:50%; width:100%;"></div>
 	
 	<div class="w3-container">
 		<h1>Mesh</h1>
@@ -31,7 +31,7 @@
 		</div>
 		
 		<div class="w3-col s8">
-			<canvas id="workspace" onclick="addMeshElement(event)" onmousemove="showCoords(event)" onmouseout="clearCoor()" class="w3-border" width="500" height="500"></canvas>
+			<canvas id="workspace" onclick="workspaceClick(event)" onmousemove="showCoords(event)" onmouseout="clearCoor()" class="w3-border" width="500" height="500"></canvas>
 		</div>
 	</div>
 
