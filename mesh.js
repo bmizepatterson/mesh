@@ -2,7 +2,14 @@ var Cells = [];
 var workspace = document.getElementById("workspace");
 var debug = document.getElementById("debugspace");
 var addSelector = 'cell';
+var radius = 20;
 
+// Utility functions
+function distance(x1, y1, x2, y2) {
+	return Math.sqrt(Math.pow((x2-x1),2) + Math.pow((y2-y1),2));
+}
+
+// Object constructors
 function Cell(x, y, r) {
 	this.x = x;
 	this.y = y;
@@ -25,12 +32,27 @@ function addMeshElement(event) {
 }
 
 function addCell(event) {
-	var newCell = new Cell(event.clientX - workspace.offsetLeft + window.pageXOffset, event.clientY - workspace.offsetTop + window.pageYOffset, 20);
-	newCell.id = Cells.length;
-	// Add it to the list of Cells
-	Cells.push(newCell);
-	// Draw it
-	drawCell(newCell);
+	// Create a new cell object
+	var newCellX = event.clientX - workspace.offsetLeft + window.pageXOffset;
+	var newCellY = event.clientY - workspace.offsetTop + window.pageYOffset;
+	var newCell = new Cell(newCellX, newCellY, radius);
+
+	// Check for collisions
+	var collision = false;
+	for (var i = 0; i < Cells.length; i++) {
+		// Use the distance formula. If the distance between the two center points is less than the sum of the two radii, then a collision has occurred.
+		if (distance(newCellX, newCellY, Cells[i].x, Cells[i].y) < (Cells[i].r + newCell.r)) {
+			collision = true;
+			break;
+		}
+	}
+
+	// Add the cell to the Cells array and draw it
+	if (collision == false) {		
+		newCell.id = Cells.length;
+		Cells.push(newCell);
+		drawCell(newCell);
+	}
 }
 
 function drawCell(Cell) {
