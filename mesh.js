@@ -81,6 +81,7 @@ function selectAddCell() {
 		document.getElementById("selectAddCell").classList.remove('w3-black');
 		document.getElementById("selectAddCell").classList.add('w3-red');
 	}
+	document.getElementById("tip").innerHTML = 'Click anywhere to add a cell body.';
 	// Deselect the other ADD buttons
 	if (document.getElementById("selectAddInput").classList.contains('w3-red')) {
 		document.getElementById("selectAddInput").classList.remove('w3-red');
@@ -99,6 +100,7 @@ function selectAddInput() {
 		document.getElementById("selectAddInput").classList.remove('w3-black');
 		document.getElementById("selectAddInput").classList.add('w3-red');
 	}
+	document.getElementById("tip").innerHTML = "Click and drag to add an input dendrite.";
 	// Deselect the other ADD buttons
 	if (document.getElementById("selectAddCell").classList.contains('w3-red')) {
 		document.getElementById("selectAddCell").classList.remove('w3-red');
@@ -117,6 +119,7 @@ function selectAddOutput() {
 		document.getElementById("selectAddOutput").classList.remove('w3-black');
 		document.getElementById("selectAddOutput").classList.add('w3-red');
 	}
+	document.getElementById("tip").innerHTML = 'Click and drag to add an output dendrite.';
 	// Deselect the other ADD buttons
 	if (document.getElementById("selectAddCell").classList.contains('w3-red')) {
 		document.getElementById("selectAddCell").classList.remove('w3-red');

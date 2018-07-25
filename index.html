@@ -6,7 +6,12 @@
 	<link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
 	<style>
 		.button-group {
+			margin-top:16px;
 			margin-bottom: 16px;
+		}
+		#tip {
+			font-style:italic;
+			margin:0;
 		}
 	</style>
 	
@@ -31,6 +36,7 @@
 		</div>
 		
 		<div class="w3-col s8">
+			<p id="tip" class="w3-text-indigo w3-center w3-small" style="width:500px;">Click anywhere to add a cell body.</p>
 			<canvas id="workspace" onclick="workspaceClick(event)" onmousemove="showCoords(event)" onmouseout="clearCoor()" class="w3-border" width="500" height="500"></canvas>
 		</div>
 	</div>
