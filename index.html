@@ -4,6 +4,11 @@
 	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 	<link rel="stylesheet" type="text/css" href="https://www.w3schools.com/w3css/4/w3.css">
 	<link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+	<style>
+		.button-group {
+			margin-bottom: 16px;
+		}
+	</style>
 	
 	<title>Mesh</title>
 </head>
@@ -17,11 +22,16 @@
 	
 	<div class="w3-row-padding">
 		<div class="w3-col s4">
-			<button id="clearWorkspace" onclick="clearWorkspace()" class="w3-button w3-black">Clear Workspace</button>		
+			<div class="button-group">
+				<button id="selectAddCell" onclick="selectAddCell()" class="w3-button w3-block w3-black">Add Cell Body</button>
+				<button id="selectAddInput" onclick="selectAddInput()" class="w3-button w3-block w3-red">Add Input Dendrite</button>
+				<button id="selectAddOutput" onclick="selectAddOutput()" class="w3-button w3-block w3-black">Add Output Dendrite</button>
+			</div>
+			<button id="clearWorkspace" onclick="clearWorkspace()" class="w3-button w3-block w3-black">Clear Workspace</button>		
 		</div>
 		
 		<div class="w3-col s8">
-			<canvas id="workspace" onclick="addCell(event)" onmousemove="showCoords(event)" onmouseout="clearCoor()" class="w3-border" width="500" height="500"></canvas>
+			<canvas id="workspace" onclick="addMeshElement(event)" onmousemove="showCoords(event)" onmouseout="clearCoor()" class="w3-border" width="500" height="500"></canvas>
 		</div>
 	</div>
 

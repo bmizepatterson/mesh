@@ -1,11 +1,22 @@
 var Cells = [];
 var workspace = document.getElementById("workspace");
 var debug = document.getElementById("debugspace");
+var addSelector = 'cell';
 
 function Cell(x, y, r) {
 	this.x = x;
 	this.y = y;
 	this.r = r;
+	this.threshold = 100;
+	this.potential = 0;
+	this.inputCells = [];
+	this.outputCells = [];
+}
+
+function addMeshElement(event) {
+	if (addSelector === 'cell') {
+		addCell(event);
+	}
 }
 
 function addCell(event) {
@@ -38,10 +49,64 @@ function clearWorkspace() {
 
 }
 
+function selectAddCell() {
+	// Set current selection setting
+	addSelector = 'cell';
+	if (document.getElementById("selectAddCell").classList.contains('w3-black')) {
+		document.getElementById("selectAddCell").classList.remove('w3-black');
+		document.getElementById("selectAddCell").classList.add('w3-red');
+	}
+	// Deselect the other ADD buttons
+	if (document.getElementById("selectAddInput").classList.contains('w3-red')) {
+		document.getElementById("selectAddInput").classList.remove('w3-red');
+		document.getElementById("selectAddInput").classList.add('w3-black');
+	}
+	if (document.getElementById("selectAddOutput").classList.contains('w3-red')) {
+		document.getElementById("selectAddOutput").classList.remove('w3-red');
+		document.getElementById("selectAddOutput").classList.add('w3-black');
+	}
+}
+
+function selectAddInput() {
+	// Set current selection setting
+	addSelector = 'input';
+	if (document.getElementById("selectAddInput").classList.contains('w3-black')) {
+		document.getElementById("selectAddInput").classList.remove('w3-black');
+		document.getElementById("selectAddInput").classList.add('w3-red');
+	}
+	// Deselect the other ADD buttons
+	if (document.getElementById("selectAddCell").classList.contains('w3-red')) {
+		document.getElementById("selectAddCell").classList.remove('w3-red');
+		document.getElementById("selectAddCell").classList.add('w3-black');
+	}
+	if (document.getElementById("selectAddOutput").classList.contains('w3-red')) {
+		document.getElementById("selectAddOutput").classList.remove('w3-red');
+		document.getElementById("selectAddOutput").classList.add('w3-black');
+	}
+}
+
+function selectAddOutput() {
+	// Set current selection setting
+	addSelector = 'output';
+	if (document.getElementById("selectAddOutput").classList.contains('w3-black')) {
+		document.getElementById("selectAddOutput").classList.remove('w3-black');
+		document.getElementById("selectAddOutput").classList.add('w3-red');
+	}
+	// Deselect the other ADD buttons
+	if (document.getElementById("selectAddCell").classList.contains('w3-red')) {
+		document.getElementById("selectAddCell").classList.remove('w3-red');
+		document.getElementById("selectAddCell").classList.add('w3-black');
+	}
+	if (document.getElementById("selectAddInput").classList.contains('w3-red')) {
+		document.getElementById("selectAddInput").classList.remove('w3-red');
+		document.getElementById("selectAddInput").classList.add('w3-black');
+	}
+}
+
 // DEBUG FUNCTIONS
 
 function print_cell(cell) {
-	debug.innerHTML += "<p>Cell " + cell.id + ": (" + cell.x + ", " + cell.y + ")</p>";
+	debug.innerHTML += "<p>Cell " + cell.id + " (" + cell.x + ", " + cell.y + "): " + cell.potential + "/" + cell.threshold + " </p>";
 }
 
 function showCoords(event) {
