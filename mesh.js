@@ -7,6 +7,11 @@ var highlightedCell = -1;
 var textAlign = 'center';
 var font = '12px sans-serif';
 var textFill = '#000';
+var arrowWidth = 7;
+var selectColor = '#3f51b5';
+var unselectColor = '#000';
+var dendriteColor = '#777';
+var wedgeColor = 'rgb(50,50,50)';
 
 // Utility functions
 function distance(x1, y1, x2, y2) {
@@ -24,6 +29,8 @@ function Cell(x, y, r, threshold, firePower) {
 	this.firePower = firePower;	// Output released when the cell fires
 	this.inputCells = [];		// Array of cells that provide input to this cell
 	this.outputCells = [];		// Array of cells to which this cell provides input
+	this.inputDendrites = [];	// Array of dendrites that connect input cells to this cell
+	this.outputDendrites = [];  // Array of dendrites that connect this cell to its output cells
 	this.highlighted = true;
 	this.selected = false;
 	this.lineWidth = 4;
@@ -37,33 +44,18 @@ function Dendrite(originCell = null, destinationCell, startX, startY, endX, endY
 	this.startY = startY;
 	this.endX = endX;
 	this.endY = endY;
+	this.length = distance(startX, startY, endX, endY);
+	this.midpointX = (startX + endX) / 2;
+	this.midpointY = (startY + endY) / 2;
 }
 
 function workspaceSetup() {
 	// Initial setup of the workspace includes one cell and one dendrite
-	var firstCell = new Cell(75, 250, 20, 100, 100);
-	firstCell.id = 0;
-	firstCell.highlighted = false;
-	firstCell.lineWidth = 1;
-	Cells.push(firstCell);
-
-	// Create the frist dendrite, which is a special case: it doesn't have an origin dendrite
+	var firstCell = addCell(75, 250, 20, 100, 100, false);
+    updatePotential(firstCell);
+	// Create the first dendrite, which is a special case: it doesn't have an origin dendrite
 	// because the first cell is stimulated by clicking the "stimulate" button.
-	var firstDendrite = new Dendrite(null, firstCell, 0, firstCell.y, firstCell.x-firstCell.r, firstCell.y);
-	firstDendrite.id = 0;
-	Dendrites.push(firstDendrite);
-	var ctx = workspace.getContext("2d");
-	ctx.beginPath();
-	ctx.moveTo(firstDendrite.startX, firstDendrite.startY);
-    ctx.lineTo(firstDendrite.endX, firstDendrite.endY);
-    ctx.arc(firstCell.x, firstCell.y, firstCell.r, Math.PI, 3*Math.PI);
-    ctx.stroke();
-
-    ctx.textAlign = textAlign;
-    ctx.font = font;
-    ctx.fillStyle = textFill;
-    ctx.fillText(firstCell.potential, firstCell.x, firstCell.y+5);
-
+	addDendrite(null, firstCell, 0, firstCell.y, firstCell.x-firstCell.r, firstCell.y);
 	printMeshStateTable();
 }
 
@@ -100,7 +92,8 @@ function workspaceMove(event) {
 			Cells[i].highlighted = true;
 			Cells[i].lineWidth = 4;
 			// Redraw cell with colored border
-			drawCell(Cells[i], '#3f51b5');
+			drawCell(Cells[i], selectColor);
+			redrawDendrites(Cells[i]);
 			break;
 		}
 	}
@@ -111,19 +104,37 @@ function workspaceMove(event) {
 	}
 }
 
-function drawDendrite(Dendrite) {
-	// Get canvas and drawing object
-	var ctx = workspace.getContext("2d");
+function addDendrite(originCell = null, destinationCell, startX, startY, endX, endY) {
+	// Create a new Dendrite object
+	var newDen = new Dendrite(originCell, destinationCell, startX, startY, endX, endY);
+	newDen.id = Dendrites.length;
+	Dendrites.push(newDen);
 
-	// Determine starting position
-
-	// Determine ending position
-
-	// Draw a line to represent a dendrite
-
+	// Add the dendrite to its origin and destination cells
+	if (originCell != null) {
+		originCell.outputDendrites[newDen.id] = newDen;
+	}
+	destinationCell.inputDendrites[newDen.id] = newDen;
+    drawDendrite(newDen);
 }
 
-function addCell(newCellX, newCellY, newRadius, newThreshold, newFirePower) {
+function drawDendrite(Dendrite) {
+	var ctx = workspace.getContext("2d");
+    ctx.beginPath();
+    ctx.strokeStyle = dendriteColor;
+    ctx.lineWidth = 1;
+	ctx.moveTo(Dendrite.startX, Dendrite.startY);
+    ctx.lineTo(Dendrite.endX, Dendrite.endY);
+    ctx.stroke();
+    // Draw arrow
+    ctx.fillStyle = dendriteColor;
+    ctx.moveTo(Dendrite.midpointX-arrowWidth, Dendrite.midpointY-arrowWidth);
+    ctx.lineTo(Dendrite.midpointX, Dendrite.midpointY);
+    ctx.lineTo(Dendrite.midpointX-arrowWidth, Dendrite.midpointY+arrowWidth);
+    ctx.fill();
+}
+
+function addCell(newCellX, newCellY, newRadius, newThreshold, newFirePower, initialSelect = true) {
 	// Create a new cell object	
 	var newCell = new Cell(newCellX, newCellY, newRadius, newThreshold, newFirePower);
 
@@ -140,8 +151,14 @@ function addCell(newCellX, newCellY, newRadius, newThreshold, newFirePower) {
 	// Add the cell to the Cells array and draw it
 	if (collision == false) {		
 		newCell.id = Cells.length;
+		if (initialSelect == true) {
+			newCell.lineWidth = 4;
+			drawCell(newCell, selectColor);
+		} else {
+			newCell.lineWidth = 1;
+			drawCell(newCell, unselectColor);
+		}
 		Cells.push(newCell);
-		drawCell(newCell, '#3f51b5');
 		return newCell;
 	} else {
 		return false;
@@ -182,6 +199,15 @@ function eraseCellInner(Cell) {
 
 }
 
+function redrawDendrites(Cell) {
+	for (let Dendrite of Cell.inputDendrites) {
+		drawDendrite(Dendrite);
+	}
+	for (let Dendrite of Cell.outputDendrites) {
+		drawDendrite(Dendrite)
+	}
+}
+
 function removeHighlights() {
 	// Check that no objects are selected
 	for (var i = 0; i < Cells.length; i++) {
@@ -191,7 +217,8 @@ function removeHighlights() {
 			Cells[i].highlighted = false;
 			Cells[i].lineWidth = 1;
 			// Redraw the cell without the colored border
-			drawCell(Cells[i], '#000');
+			drawCell(Cells[i], unselectColor);
+			redrawDendrites(Cells[i]);
 		}
 	}
 }
@@ -251,49 +278,78 @@ function stimulate(Cell, power) {
 		}
 		Cell.potential = 0;
 	} else {
+		oldPotential = Cell.potential;
 		Cell.potential = Cell.potential + power;
-		updatePotential(Cell);
+		updatePotential(Cell, true, oldPotential);
 	}
 	printMeshStateTable();
 }
 
-function updatePotential(Cell) {
+function updatePotential(Cell, animate = false, oldPotential = null) {
 	var ctx = workspace.getContext('2d');
 	// Erase old potential
 	eraseCellInner(Cell);
-	// Draw new potential
 	potentialRatio = Cell.potential / Cell.threshold;
-	ctx.beginPath();
-	// Background wedge
-	ctx.moveTo(Cell.x, Cell.y);
-	ctx.fillStyle = 'rgb(0,0,255)';
-	ctx.arc(Cell.x, Cell.y, Cell.r*0.75, 1.5*Math.PI, 1.5*Math.PI + (potentialRatio*2*Math.PI));
-	ctx.fill();
-	// Transparent wedge on top (needs to extend just little past the background wedge)
-	ctx.moveTo(Cell.x, Cell.y);
-	ctx.fillStyle = 'rgba(255,255,255,' + (1-potentialRatio) + ')';
-	ctx.arc(Cell.x, Cell.y, Cell.r*0.8, 1.5*Math.PI, 1.5*Math.PI + (potentialRatio*2.1*Math.PI));
-	ctx.fill();
-	// Write the potential ratio inside the circle
-	ctx.textAlign = textAlign;
-    ctx.font = font;
-    ctx.fillStyle = textFill;
-    ctx.fillText(potentialRatio*100, Cell.x, Cell.y+5);
+
+	if (potentialRatio > 0) {
+		var target = 1.5*Math.PI + (potentialRatio*2*Math.PI); // 1.5*PI starts us at the top of the circle. Dang radians.
+		if (animate == true) {
+			// Instantly draw the current wedge
+			var oldPotentialRatio = oldPotential / Cell.threshold;
+			var start = 1.5*Math.PI + (oldPotentialRatio*2*Math.PI);
+			ctx.beginPath();
+			ctx.fillStyle = wedgeColor;
+			ctx.moveTo(Cell.x, Cell.y);
+			ctx.arc(Cell.x, Cell.y, Cell.r*0.75, 1.5*Math.PI, start);
+			ctx.fill();
+			// Animate the drawing of the wedge that represents accumulated potential
+			var progress = start;
+			var wedgeAnimation = setInterval(function() {
+						// End animation if the wedge has been drawn
+						if (progress >= target) {
+							clearInterval(wedgeAnimation);
+						} else {
+							ctx.arc(Cell.x, Cell.y, Cell.r*0.75, start, progress);
+							ctx.fill();
+						}
+						progress = progress + 3*Math.PI / 180; // Increment by 3-degree intervals
+				}, 20);
+		} else {
+			// Draw without animating
+			ctx.beginPath();
+			ctx.fillStyle = wedgeColor;
+			ctx.moveTo(Cell.x, Cell.y);
+			ctx.arc(Cell.x, Cell.y, Cell.r*0.75, 1.5*Math.PI, target);
+			ctx.fill();
+		}
+	}
 }
 
 function fire(Cell) {
-	// Erase
 	eraseCellInner(Cell);
-	// Animate a cell firing
+	// Instantly draw the current wedge
 	var ctx = workspace.getContext('2d');
-	// Fill cell with bright blue to indicate that it is firing
-	ctx.fillStyle = 'rgb(0,0,255)';
+	var oldPotentialRatio = Cell.potential / Cell.threshold;
+	var start = 1.5*Math.PI + (oldPotentialRatio*2*Math.PI);
 	ctx.beginPath();
-	ctx.arc(Cell.x, Cell.y, Cell.r*0.75, 0, 2*Math.PI);
+	ctx.fillStyle = wedgeColor;
+	ctx.moveTo(Cell.x, Cell.y);
+	ctx.arc(Cell.x, Cell.y, Cell.r*0.75, 1.5*Math.PI, start);
 	ctx.fill();
-	// Redraw the cell after the color flashes
-	setTimeout(updatePotential, 200, Cell);
-
+	var progress = start;
+	var wedgeAnimation = setInterval(function() {
+				// End animation if the wedge has been drawn
+				if (progress > 3.5*Math.PI) {	// Target is going all the way around and back up to the top of the circle
+					ctx.arc(Cell.x, Cell.y, Cell.r*0.75, 0, 2*Math.PI);
+					ctx.fill();
+					clearInterval(wedgeAnimation);
+					setTimeout(updatePotential, 500, Cell);
+				} else {
+					ctx.arc(Cell.x, Cell.y, Cell.r*0.75, start, progress);
+					ctx.fill();
+				}
+				progress = progress + 3*Math.PI / 180; // Increment by 3-degree intervals
+		}, 20);
 }
 
 // DEBUG FUNCTIONS
@@ -308,7 +364,7 @@ function printMeshStateTable() {
 	// Setup table columns
 	html += '<table class="w3-table-all w3-small"><tr><th>Cell ID</th><th>Coordinates</th><th>Potential</th><th>Threshold</th><th>Input Dendrites</th><th>Output Dendrites</th></tr>';
 	for (var i = 0; i < Cells.length; i++) {
-		html += '<tr><td>' + Cells[i].id + '</td><td>(' + Cells[i].x + ', ' + Cells[i].y + ')</td><td>' + Cells[i].potential + '</td><td>' + Cells[i].threshold + '</td><td>' + Cells[i].inputCells.length + '</td><td>' + Cells[i].outputCells.length + '</td></tr>';
+		html += '<tr><td>' + Cells[i].id + '</td><td>(' + Cells[i].x + ', ' + Cells[i].y + ')</td><td>' + Cells[i].potential + '</td><td>' + Cells[i].threshold + '</td><td>' + Cells[i].inputDendrites.length + '</td><td>' + Cells[i].outputDendrites.length + '</td></tr>';
 	}
 	html += '</table>';
 	debug.innerHTML = html;
