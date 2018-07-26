@@ -19,6 +19,18 @@ function distance(x1, y1, x2, y2) {
 	return Math.ceil(Math.sqrt(Math.pow((x2-x1),2) + Math.pow((y2-y1),2)));
 }
 
+function checkForCollision(x,y) {
+	var collision = false;
+	for (var i = 0; i < Cells.length; i++) {
+		if (distance(x, y, Cells[i].x, Cells[i].y) <= Cells[i].r) {
+			// If the distance between the mouse and this cell's center is less than this cell's radius, then we have a collision.
+			collision = Cells[i];
+			break;
+		}
+	}
+	return collision;
+}
+
 // Object constructors
 function Cell(x, y, r, threshold, firePower) {
 	this.x = x;
@@ -60,13 +72,15 @@ function workspaceSetup() {
 }
 
 function workspaceClick(event) {
+	var x = event.clientX - workspace.offsetLeft + window.pageXOffset;
+	var y = event.clientY - workspace.offsetTop + window.pageYOffset;
+	// Are we clicking on a cell body?
 	if (addSelector === 'cell') {
-		var newCellX = event.clientX - workspace.offsetLeft + window.pageXOffset;
-		var newCellY = event.clientY - workspace.offsetTop + window.pageYOffset;
+		// Add a cell body
 		var newCellRadius = 20;
 		var newCellThreshold = 100;
 		var newCellFirePower = 100;
-		addCell(newCellX, newCellY, newCellRadius, newCellThreshold, newCellFirePower);
+		addCell(x, y, newCellRadius, newCellThreshold, newCellFirePower);
 	} else if (addSelector === 'dendrite') {
 		addDendrite(event);
 	}
@@ -81,26 +95,19 @@ function workspaceMove(event) {
     document.getElementById("collision").innerHTML = 'highlighted cell: ' + highlightedCell;
 
 	// Check for collision with a cell body. 
-	var collision = false;
-	for (var i = 0; i < Cells.length; i++) {
-		if (distance(x, y, Cells[i].x, Cells[i].y) <= Cells[i].r) {
-			// If the distance between the mouse and this cell's center is less than this cell's radius, then we have a collision.
-			collision = true;
-			eraseCell(Cells[i]);
-			// Set selected flag
-			highlightedCell = i;
-			Cells[i].highlighted = true;
-			Cells[i].lineWidth = 4;
-			// Redraw cell with colored border
-			drawCell(Cells[i], selectColor);
-			redrawDendrites(Cells[i]);
-			break;
-		}
-	}
-
+	var collision = checkForCollision(x,y);
 	if (collision == false) {
 		highlightedCell = -1;
 		removeHighlights();
+	} else {
+		eraseCell(collision);
+		// Set selected flag
+		highlightedCell = collision.id;
+		collision.highlighted = true;
+		collision.lineWidth = 4;
+		// Redraw cell with colored border
+		drawCell(collision, selectColor);
+		redrawDendrites(collision);
 	}
 }
 
