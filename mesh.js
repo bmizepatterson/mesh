@@ -1,9 +1,11 @@
+// Global variables
 var Cells = [];
 var Dendrites = [];
+var drawingDendrite = false;
 var workspace = document.getElementById("workspace");
 var debug = document.getElementById("debugspace");
-var addSelector = 'cell';
 var highlightedCell = -1;
+var selectedCell = -1;
 var textAlign = 'center';
 var font = '12px sans-serif';
 var textFill = '#000';
@@ -14,9 +16,20 @@ var dendriteColor = '#777';
 var wedgeColor = 'rgb(50,50,50)';
 
 // Utility functions
+function load() {
+	workspaceSetup();
+	setInterval(watch, 100);
+}
+
 function distance(x1, y1, x2, y2) {
 	// Use the distance formula to calculate the distance between two points.
 	return Math.ceil(Math.sqrt(Math.pow((x2-x1),2) + Math.pow((y2-y1),2)));
+}
+
+function watch() {
+	document.getElementById("drawingDendrite").innerHTML = drawingDendrite;
+	document.getElementById("highlightedCell").innerHTML = highlightedCell;
+	document.getElementById("selectedCell").innerHTML = selectedCell;
 }
 
 function checkForCollision(x,y) {
@@ -43,7 +56,7 @@ function Cell(x, y, r, threshold, firePower) {
 	this.outputCells = [];		// Array of cells to which this cell provides input
 	this.inputDendrites = [];	// Array of dendrites that connect input cells to this cell
 	this.outputDendrites = [];  // Array of dendrites that connect this cell to its output cells
-	this.highlighted = true;
+	this.highlighted = false;
 	this.selected = false;
 	this.lineWidth = 4;
 	this.outerRadius = r + this.lineWidth;
@@ -71,18 +84,39 @@ function workspaceSetup() {
 	printMeshStateTable();
 }
 
-function workspaceClick(event) {
+function workspaceMouseClick(event) {
 	var x = event.clientX - workspace.offsetLeft + window.pageXOffset;
 	var y = event.clientY - workspace.offsetTop + window.pageYOffset;
 	// Are we clicking on a cell body?
-	if (addSelector === 'cell') {
-		// Add a cell body
-		var newCellRadius = 20;
-		var newCellThreshold = 100;
-		var newCellFirePower = 100;
-		addCell(x, y, newCellRadius, newCellThreshold, newCellFirePower);
-	} else if (addSelector === 'dendrite') {
-		addDendrite(event);
+	var collision = checkForCollision(x,y);
+
+	if (drawingDendrite) {
+		if (collision instanceof Cell) {
+			// Create a dendrite between the selected cell and this cell
+		} else {
+			// Abort the dendrite creation and deselect the selected cell
+			eraseCell(Cells[selectedCell]);
+			Cells[selectedCell].selected = false;
+			Cells[selectedCell].lineWidth = 1;
+			drawCell(Cells[selectedCell], unselectColor);
+			redrawDendrites(Cells[selectedCell]);
+			selectedCell = -1;
+		}
+		drawingDendrite = false;
+	} else {		
+		if (collision instanceof Cell) {
+			// Select the cell and enter dendrite-drawing mode
+			eraseCellInner(collision);
+			// Set selected flag
+			selectedCell = collision.id;
+			collision.selected = true;
+			drawCell(collision, selectColor, selectColor);
+			redrawDendrites(collision);
+			drawingDendrite = true;
+		} else if (!collision) {
+			// Add a cell at the current mouse location
+			var newCell = addCell(x, y, 20, 100, 100);
+		}
 	}
 	printMeshStateTable();
 }
@@ -92,22 +126,32 @@ function workspaceMove(event) {
 	var x = event.clientX - workspace.offsetLeft + window.pageXOffset;
     var y = event.clientY - workspace.offsetTop + window.pageYOffset;
     document.getElementById("mousecoords").innerHTML = "(" + x + ", " + y + ")";
-    document.getElementById("collision").innerHTML = 'highlighted cell: ' + highlightedCell;
 
 	// Check for collision with a cell body. 
 	var collision = checkForCollision(x,y);
-	if (collision == false) {
-		highlightedCell = -1;
-		removeHighlights();
+
+
+	if (!collision) {
+		// If there was a highlighted cell, then unhighlight it
+		if (highlightedCell > -1) {
+			eraseCell(Cells[highlightedCell]);
+			Cells[highlightedCell].highlighted = false;
+			Cells[highlightedCell].lineWidth = 1;
+			var selected = Cells[highlightedCell].selected ? selectColor : null;
+			drawCell(Cells[highlightedCell], unselectColor, selected)
+			highlightedCell = -1;
+		}
 	} else {
-		eraseCell(collision);
-		// Set selected flag
-		highlightedCell = collision.id;
-		collision.highlighted = true;
-		collision.lineWidth = 4;
-		// Redraw cell with colored border
-		drawCell(collision, selectColor);
-		redrawDendrites(collision);
+		if (collision.id != selectedCell) {
+			eraseCell(collision);
+			// Set highlighted flag
+			highlightedCell = collision.id;
+			collision.highlighted = true;
+			collision.lineWidth = 4;
+			// Redraw cell with colored border
+			drawCell(collision, selectColor);
+			redrawDendrites(collision);
+		}
 	}
 }
 
@@ -160,6 +204,8 @@ function addCell(newCellX, newCellY, newRadius, newThreshold, newFirePower, init
 		newCell.id = Cells.length;
 		if (initialSelect == true) {
 			newCell.lineWidth = 4;
+			newCell.highlighted = true;
+			highlightedCell = newCell.id;
 			drawCell(newCell, selectColor);
 		} else {
 			newCell.lineWidth = 1;
@@ -172,7 +218,7 @@ function addCell(newCellX, newCellY, newRadius, newThreshold, newFirePower, init
 	}
 }
 
-function drawCell(Cell, strokeColor) {
+function drawCell(Cell, strokeColor, fillColor = null) {
 	// Get canvas and drawing object
 	var ctx = workspace.getContext("2d");
 
@@ -181,8 +227,15 @@ function drawCell(Cell, strokeColor) {
 	ctx.lineWidth = Cell.lineWidth;
 	ctx.beginPath();
 	ctx.arc(Cell.x,Cell.y,Cell.r,0,2*Math.PI);
-	ctx.stroke();
-	updatePotential(Cell);
+	if (fillColor == null) {
+		ctx.stroke();
+		// Only update potential if we're not selecting this cell,
+		// otherwise it will be painted over with the fill color
+		updatePotential(Cell);
+	} else {
+		ctx.fillStyle = fillColor;
+		ctx.fill();
+	}
 }
 
 function eraseCell(Cell) {
@@ -215,21 +268,6 @@ function redrawDendrites(Cell) {
 	}
 }
 
-function removeHighlights() {
-	// Check that no objects are selected
-	for (var i = 0; i < Cells.length; i++) {
-		if (Cells[i].highlighted == true) {
-			eraseCell(Cells[i]);
-			// Set selected flag
-			Cells[i].highlighted = false;
-			Cells[i].lineWidth = 1;
-			// Redraw the cell without the colored border
-			drawCell(Cells[i], unselectColor);
-			redrawDendrites(Cells[i]);
-		}
-	}
-}
-
 function clearWorkspace() {
 	// Clear out Cells array
 	Cells = [];
@@ -240,38 +278,6 @@ function clearWorkspace() {
 	// Clear debug area
 	debug.innerHTML = '';
 	workspaceSetup();
-}
-
-function selectAddCell() {
-	// Set current selection setting
-	addSelector = 'cell';
-	if (document.getElementById("selectAddCell").classList.contains('w3-black')) {
-		document.getElementById("selectAddCell").classList.remove('w3-black');
-		document.getElementById("selectAddCell").classList.add('w3-red');
-	}
-	document.getElementById("tip").innerHTML = 'Click anywhere to add a cell body.';
-	// Deselect the other ADD buttons
-	if (document.getElementById("selectAddDendrite").classList.contains('w3-red')) {
-		document.getElementById("selectAddDendrite").classList.remove('w3-red');
-		document.getElementById("selectAddDendrite").classList.add('w3-black');
-	}
-
-}
-
-function selectAddDendrite() {
-	// Set current selection setting
-	addSelector = 'dendrite';
-	if (document.getElementById("selectAddDendrite").classList.contains('w3-black')) {
-		document.getElementById("selectAddDendrite").classList.remove('w3-black');
-		document.getElementById("selectAddDendrite").classList.add('w3-red');
-	}
-	document.getElementById("tip").innerHTML = 'To add a dendrite, click and drag from the source cell to the destination cell.';
-	// Deselect the other ADD buttons
-	if (document.getElementById("selectAddCell").classList.contains('w3-red')) {
-		document.getElementById("selectAddCell").classList.remove('w3-red');
-		document.getElementById("selectAddCell").classList.add('w3-black');
-	}
-
 }
 
 function stimulate(Cell, power) {
