@@ -66,8 +66,8 @@ function Cell(x, y, r, threshold, firePower, ctx) {
 	this.threshold = threshold;	// Input needed before the cell will fire
 	this.potential = 0;			// Input that has been collected so far
 	this.firePower = firePower;	// Output released when the cell fires
-	this.inputCells = [];		// Array of cells that provide input to this cell
-	this.outputCells = [];		// Array of cells to which this cell provides input
+	// this.inputCells = [];		// Array of cells that provide input to this cell
+	// this.outputCells = [];		// Array of cells to which this cell provides input
 	this.inputDendrites = [];	// Array of dendrites that connect input cells to this cell
 	this.outputDendrites = [];  // Array of dendrites that connect this cell to its output cells
 	this.highlighted = false;
@@ -151,6 +151,9 @@ function Cell(x, y, r, threshold, firePower, ctx) {
 	}
 
 	this.highlight = function () {
+		// Set flags
+		highlightedCell = this.id;
+		this.highlighted = true;
 		// Draw a circle around a cell to highlight it
 		this.ctx.beginPath();
 		this.ctx.strokeStyle = highlightColor;
@@ -160,6 +163,9 @@ function Cell(x, y, r, threshold, firePower, ctx) {
 	}
 
 	this.unhighlight = function () {
+		// Set flags
+		highlightedCell = -1;
+		this.highlighted = false;
 		// Cover up the circle around a cell
 		this.ctx.beginPath();
 		this.ctx.strokeStyle = '#fff';
@@ -188,7 +194,6 @@ function Cell(x, y, r, threshold, firePower, ctx) {
 	this.stimulate = function (power) {
 		var oldPotential = this.potential;
 		var newPotential = oldPotential + power;
-
 		// Recursively stimulate all output cells
 		if (newPotential >= this.threshold) {
 			this.potential = 0;
@@ -200,7 +205,6 @@ function Cell(x, y, r, threshold, firePower, ctx) {
 		} else {
 			this.potential = newPotential;		
 		}
-
 		oldPotentialRatio = oldPotential / this.threshold;
 		newPotentialRatio = newPotential / this.threshold;
 		this.drawPotentialWedge(true, oldPotentialRatio, newPotentialRatio);
@@ -315,15 +319,11 @@ function workspaceMove(event) {
 	if (!collision) {
 		// If there used to be a highlighted cell, then unhighlight it
 		if (highlightedCell > -1) {
-			Cells[highlightedCell].highlighted = false;
-			Cells[highlightedCell].unhighlight();
-			Cells[highlightedCell].redrawDendrites();
-			highlightedCell = -1;
+			cell = Cells[highlightedCell];
+			cell.unhighlight();
+			cell.redrawDendrites();
 		}
 	} else {
-		// Set highlighted flag
-		highlightedCell = collision.id;
-		collision.highlighted = true;
 		// Draw a circle around the collision
 		collision.highlight();
 	}
@@ -355,8 +355,6 @@ function addCell(newCellX, newCellY, newRadius, newThreshold, newFirePower, init
 	// Add the cell to the Cells array and draw it
 	newCell.id = Cells.length;
 	if (initialHighlight) {
-		newCell.highlighted = true;
-		highlightedCell = newCell.id;
 		newCell.draw(cellColor, false);
 		newCell.highlight();
 	} else {
