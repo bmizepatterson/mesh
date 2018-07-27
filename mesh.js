@@ -10,6 +10,7 @@ var textAlign = 'center';
 var font = '12px sans-serif';
 var textFill = '#000';
 var arrowWidth = 7;
+var arrowAngle = Math.PI/4 // 45 degrees
 var highlightWidth = 3;
 var highlightOffset = 5;
 var selectColor = '#3f51b5';
@@ -123,13 +124,13 @@ function Cell(x, y, r, threshold, firePower, ctx) {
 								cell.ctx.moveTo(cell.x, cell.y);
 								cell.ctx.arc(cell.x, cell.y, cell.r*0.8, 0, 2*Math.PI);
 								cell.ctx.fill();
-								window.setTimeout(function() { cell.eraseInner(); } , 500);
+								window.setTimeout(function() { cell.eraseInner(); } , 250);
 							}
 							// End animation
 							clearInterval(wedgeAnimation);
 						}
 						progress = progress + 3*Math.PI / 180; // Increment by 3-degree intervals
-				}, 20);
+				}, 10);
 		} else {
 			// Draw without animating
 			this.ctx.beginPath();
@@ -245,6 +246,52 @@ function Dendrite(originCell = null, destinationCell, startX, startY, endX, endY
 	this.midpointX = (startX + endX) / 2;
 	this.midpointY = (startY + endY) / 2;
 	this.ctx = ctx;
+	this.arrowCoords = null;
+
+	this.getArrowCoords = function() {
+		// Calculate (if needed) the coordinates for each side of the arrow
+		// Uses global arrowWidth variable
+		// Returns the coordinates in an array of four elements: x1, y1, x2, y2
+		// if (this.arrowCoords == null) {
+			if (arrowWidth === 0) {
+				console.log('Unable to calculate arrow coordinates of dendrite #'+this.id+'. (Arrow width cannot be zero.)');
+				return false;
+			}
+			arrowWidth=20;
+			arrowAngle=Math.PI*0.25;
+
+			// If the destination cell is on the right, then the arrow needs to point to the right
+			var x1, y1, x2, y2;
+			if (this.endX > this.startX) {
+				x1 = Math.round(this.midpointX - Math.cos(arrowAngle - Math.asin(2*(this.midpointY-this.destinationCell.y)/this.length))*arrowWidth/(2*Math.sin(arrowAngle)));
+				y1 = Math.round(this.midpointY - Math.sin(arrowAngle - Math.asin(2*(this.midpointY-this.destinationCell.y)/this.length))*arrowWidth/(2*Math.sin(arrowAngle)));
+				x2 = Math.round(this.midpointX - Math.cos(arrowAngle + Math.asin(2*(this.midpointY-this.destinationCell.y)/this.length))*arrowWidth/(2*Math.sin(arrowAngle)));
+				y2 = Math.round(this.midpointY + Math.sin(arrowAngle + Math.asin(2*(this.midpointY-this.destinationCell.y)/this.length))*arrowWidth/(2*Math.sin(arrowAngle)));
+			} else if (this.endX < this.startX) {
+				x1 = Math.round(this.midpointX + Math.cos(arrowAngle + Math.asin(2*(this.midpointY-this.destinationCell.y)/this.length))*arrowWidth/(2*Math.sin(arrowAngle)));
+				y1 = Math.round(this.midpointY + Math.sin(arrowAngle + Math.asin(2*(this.midpointY-this.destinationCell.y)/this.length))*arrowWidth/(2*Math.sin(arrowAngle)));
+				x2 = Math.round(this.midpointX - Math.cos(arrowAngle + Math.asin(2*(this.midpointY-this.destinationCell.y)/this.length))*arrowWidth/(2*Math.sin(arrowAngle)));
+				y2 = Math.round(this.midpointY - Math.sin(arrowAngle + Math.asin(2*(this.midpointY-this.destinationCell.y)/this.length))*arrowWidth/(2*Math.sin(arrowAngle)));
+			} else {
+				// This dendrite is vertical
+				// Should it point up or down?
+				x1 = Math.round(this.midpointX - arrowWidth/2);
+				x2 = Math.round(this.midpointX + arrowWidth/2);
+				if (this.startY < this.endY) {
+					// Point up
+					// Y values are the same if it's pointing up
+					y1 = y2 = Math.round(this.midpointY + arrowWidth/(2*Math.tan(arrowAngle)));
+				} else {
+					// Point down
+					y1 = y2 = Math.round(this.midpointY - arrowWidth/(2*Math.tan(arrowAngle)));
+				}
+			}
+			document.getElementById("arrowCoords").innerHTML = '('+x2+', '+y2+'); ('+this.midpointX+', '+this.midpointY+')';
+
+			this.arrowCoords = [x1,y1,x2,y2];
+		// }
+		return this.arrowCoords;
+	}
 
 	this.draw = function (color, width) {
 	    this.ctx.beginPath();
@@ -254,11 +301,23 @@ function Dendrite(originCell = null, destinationCell, startX, startY, endX, endY
 	    this.ctx.lineTo(this.endX, this.endY);
 	    this.ctx.stroke();
 	    // Draw arrow
-	    this.ctx.fillStyle = color;
-	    this.ctx.moveTo(this.midpointX-arrowWidth, this.midpointY-arrowWidth);
-	    this.ctx.lineTo(this.midpointX, this.midpointY);
-	    this.ctx.lineTo(this.midpointX-arrowWidth, this.midpointY+arrowWidth);
-	    this.ctx.fill();
+	    if (this.getArrowCoords()) {
+	    	this.ctx.beginPath();
+	    	this.ctx.fillStyle = color;
+	    	this.ctx.moveTo(this.arrowCoords[0], this.arrowCoords[1]);
+	    	this.ctx.lineTo(Math.round(this.midpointX), Math.round(this.midpointY));
+	    	this.ctx.lineTo(this.arrowCoords[2], this.arrowCoords[3]);
+	    	this.ctx.stroke();
+
+	    	// this.ctx.beginPath();
+	    	// this.ctx.fillStyle = 'blue';	    	
+	    	// this.ctx.arc(this.arrowCoords[2], this.arrowCoords[3],2,0,2*Math.PI);
+	    	// this.ctx.fill();
+	    	// this.ctx.beginPath();
+	    	// this.ctx.fillStyle = 'red';
+	    	// this.ctx.arc(this.midpointX, this.midpointY,2,0,2*Math.PI);
+	    	// this.ctx.fill();
+	    }
 	}
 }
 
