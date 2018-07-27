@@ -17,31 +17,42 @@
 			margin-bottom:32px;
 			margin-top:32px;
 		}
+		#watchlist {
+			margin-top:16px;
+		}
+		#watchlist p {
+			margin:0;
+		}
 	</style>
 	
 	<title>Mesh</title>
 </head>
 <body onload="load()">
-	<div id="mousecoords" class="w3-container" style="position:absolute; top:50%; width:100%;"></div>
 	
 	<div class="w3-container">
-		<h1>Mesh</h1>
-		<p>A graphical neural network simulator</p>
+		<h1 style="margin-bottom:0;">Mesh</h1>
+		<p class="w3-text-gray w3-small" style="margin-top:0px;"><em>A graphical neural network simulator</em></p>
 	</div>
 	
 	<div class="w3-row-padding">
 		<div class="w3-col s4">
+			<p>Click anywhere to add a cell body.</p>
+			<p>To connect cells together, click on the first cell, then click on the second cell.</p>
+			<p>Click the "Stimulate" button to provide input to the first cell and see how it propogates throughout the network!</p>
 			<div class="button-group">
 				<button id="stimulate" onclick="Cells[0].stimulate(1)" class="w3-button w3-block w3-indigo">Stimulate</button>
 			</div>
 			<button id="clearWorkspace" onclick="clearWorkspace()" class="w3-button w3-block w3-black">Reset</button>
-			<p>drawingDendrite = <span id="drawingDendrite"></span></p>
-			<p>selectedCell = <span id="selectedCell"></span></p>
-			<p>highlightedCell = <span id="highlightedCell"></span></p>	
+			<div id="watchlist">
+				<p>Mouse: <span id="mousecoords"></span></p>
+				<p>drawingDendrite = <span id="drawingDendrite"></span></p>
+				<p>selectedCell = <span id="selectedCell"></span></p>
+				<p>highlightedCell = <span id="highlightedCell"></span></p>	
+			</div>
 		</div>
 		
 		<div class="w3-col s8">
-			<p id="tip" class="w3-text-indigo w3-center w3-small" style="width:500px;">Click anywhere to add a cell body.</p>
+			<p id="tip" class="w3-text-indigo w3-center w3-small" style="width:500px;"></p>
 			<canvas id="workspace"  onclick="workspaceMouseClick(event)" onmousemove="workspaceMove(event)" onmouseout="clearCoor()" class="w3-border" width="500" height="500"></canvas>
 		</div>
 	</div>
