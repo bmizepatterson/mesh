@@ -3,6 +3,7 @@ var Cells = [];
 var Dendrites = [];
 var drawingDendrite = false;
 var workspace = document.getElementById("workspace");
+var ctx = workspace.getContext("2d");
 var debug = document.getElementById("debugspace");
 var highlightedCell = -1;
 var selectedCell = -1;
@@ -10,8 +11,11 @@ var textAlign = 'center';
 var font = '12px sans-serif';
 var textFill = '#000';
 var arrowWidth = 7;
-var selectColor = '#3f51b5';
-var unselectColor = '#000';
+var highlightWidth = 3;
+var highlightOffset = 5;
+var selectColor = '#9c27b0';
+var cellColor = '#000';
+var highlightColor = '#3f51b5';
 var dendriteColor = '#777';
 var wedgeColor = 'rgb(50,50,50)';
 
@@ -58,8 +62,6 @@ function Cell(x, y, r, threshold, firePower) {
 	this.outputDendrites = [];  // Array of dendrites that connect this cell to its output cells
 	this.highlighted = false;
 	this.selected = false;
-	this.lineWidth = 4;
-	this.outerRadius = r + this.lineWidth;
 }
 
 function Dendrite(originCell = null, destinationCell, startX, startY, endX, endY) {
@@ -92,13 +94,15 @@ function workspaceMouseClick(event) {
 
 	if (drawingDendrite) {
 		if (collision instanceof Cell) {
+			// Abort if we're clicking on the selected cell again
+
 			// Create a dendrite between the selected cell and this cell
+
 		} else {
 			// Abort the dendrite creation and deselect the selected cell
 			eraseCell(Cells[selectedCell]);
 			Cells[selectedCell].selected = false;
-			Cells[selectedCell].lineWidth = 1;
-			drawCell(Cells[selectedCell], unselectColor);
+			drawCell(Cells[selectedCell], cellColor, false);
 			redrawDendrites(Cells[selectedCell]);
 			selectedCell = -1;
 		}
@@ -106,12 +110,14 @@ function workspaceMouseClick(event) {
 	} else {		
 		if (collision instanceof Cell) {
 			// Select the cell and enter dendrite-drawing mode
-			eraseCellInner(collision);
+			eraseCell(collision);
 			// Set selected flag
 			selectedCell = collision.id;
 			collision.selected = true;
-			drawCell(collision, selectColor, selectColor);
+			drawCell(collision, selectColor, true);
 			redrawDendrites(collision);
+			highlightCell(collision);
+			updatePotential(collision);
 			drawingDendrite = true;
 		} else if (!collision) {
 			// Add a cell at the current mouse location
@@ -126,32 +132,22 @@ function workspaceMove(event) {
 	var x = event.clientX - workspace.offsetLeft + window.pageXOffset;
     var y = event.clientY - workspace.offsetTop + window.pageYOffset;
     document.getElementById("mousecoords").innerHTML = "(" + x + ", " + y + ")";
-
 	// Check for collision with a cell body. 
 	var collision = checkForCollision(x,y);
-
-
 	if (!collision) {
-		// If there was a highlighted cell, then unhighlight it
+		// If there used to be a highlighted cell, then unhighlight it
 		if (highlightedCell > -1) {
-			eraseCell(Cells[highlightedCell]);
 			Cells[highlightedCell].highlighted = false;
-			Cells[highlightedCell].lineWidth = 1;
-			var selected = Cells[highlightedCell].selected ? selectColor : null;
-			drawCell(Cells[highlightedCell], unselectColor, selected)
+			unhighlightCell(Cells[highlightedCell]);
+			redrawDendrites(Cells[highlightedCell]);
 			highlightedCell = -1;
 		}
 	} else {
-		if (collision.id != selectedCell) {
-			eraseCell(collision);
-			// Set highlighted flag
-			highlightedCell = collision.id;
-			collision.highlighted = true;
-			collision.lineWidth = 4;
-			// Redraw cell with colored border
-			drawCell(collision, selectColor);
-			redrawDendrites(collision);
-		}
+		// Set highlighted flag
+		highlightedCell = collision.id;
+		collision.highlighted = true;
+		// Draw a circle around the collision
+		highlightCell(collision);
 	}
 }
 
@@ -166,29 +162,27 @@ function addDendrite(originCell = null, destinationCell, startX, startY, endX, e
 		originCell.outputDendrites[newDen.id] = newDen;
 	}
 	destinationCell.inputDendrites[newDen.id] = newDen;
-    drawDendrite(newDen);
+    drawDendrite(newDen, dendriteColor, 1);
 }
 
-function drawDendrite(Dendrite) {
-	var ctx = workspace.getContext("2d");
+function drawDendrite(Dendrite, color, width) {
     ctx.beginPath();
-    ctx.strokeStyle = dendriteColor;
-    ctx.lineWidth = 1;
+    ctx.strokeStyle = color;
+    ctx.lineWidth = width;
 	ctx.moveTo(Dendrite.startX, Dendrite.startY);
     ctx.lineTo(Dendrite.endX, Dendrite.endY);
     ctx.stroke();
     // Draw arrow
-    ctx.fillStyle = dendriteColor;
+    ctx.fillStyle = color;
     ctx.moveTo(Dendrite.midpointX-arrowWidth, Dendrite.midpointY-arrowWidth);
     ctx.lineTo(Dendrite.midpointX, Dendrite.midpointY);
     ctx.lineTo(Dendrite.midpointX-arrowWidth, Dendrite.midpointY+arrowWidth);
     ctx.fill();
 }
 
-function addCell(newCellX, newCellY, newRadius, newThreshold, newFirePower, initialSelect = true) {
+function addCell(newCellX, newCellY, newRadius, newThreshold, newFirePower, initialHighlight = true) {
 	// Create a new cell object	
 	var newCell = new Cell(newCellX, newCellY, newRadius, newThreshold, newFirePower);
-
 	// Check for collisions
 	var collision = false;
 	for (var i = 0; i < Cells.length; i++) {
@@ -198,18 +192,16 @@ function addCell(newCellX, newCellY, newRadius, newThreshold, newFirePower, init
 			break;
 		}
 	}
-
 	// Add the cell to the Cells array and draw it
 	if (collision == false) {		
 		newCell.id = Cells.length;
-		if (initialSelect == true) {
-			newCell.lineWidth = 4;
+		if (initialHighlight == true) {
 			newCell.highlighted = true;
 			highlightedCell = newCell.id;
-			drawCell(newCell, selectColor);
+			drawCell(newCell, cellColor, false);
+			highlightCell(newCell);
 		} else {
-			newCell.lineWidth = 1;
-			drawCell(newCell, unselectColor);
+			drawCell(newCell, cellColor, false);
 		}
 		Cells.push(newCell);
 		return newCell;
@@ -218,40 +210,49 @@ function addCell(newCellX, newCellY, newRadius, newThreshold, newFirePower, init
 	}
 }
 
-function drawCell(Cell, strokeColor, fillColor = null) {
-	// Get canvas and drawing object
-	var ctx = workspace.getContext("2d");
+function highlightCell(Cell) {
+	// Draw a circle around a cell to highlight it
+	ctx.strokeStyle = highlightColor;
+	ctx.lineWidth = highlightWidth;
+	ctx.beginPath();
+	ctx.arc(Cell.x, Cell.y, Cell.r+highlightOffset, 0, 2*Math.PI);
+	ctx.stroke();
+}
 
-	ctx.strokeStyle = strokeColor;
-	// Draw a circle to represent a neuron
-	ctx.lineWidth = Cell.lineWidth;
+function unhighlightCell(Cell) {
+	// Cover up the circle around a cell
+	ctx.strokeStyle = '#fff';
+	ctx.lineWidth = highlightWidth+2;
+	ctx.beginPath();
+	ctx.arc(Cell.x, Cell.y, Cell.r+highlightOffset, 0, 2*Math.PI);
+	ctx.stroke();
+}
+
+function drawCell(Cell, color, fill) {
 	ctx.beginPath();
 	ctx.arc(Cell.x,Cell.y,Cell.r,0,2*Math.PI);
-	if (fillColor == null) {
-		ctx.stroke();
-		// Only update potential if we're not selecting this cell,
-		// otherwise it will be painted over with the fill color
-		updatePotential(Cell);
-	} else {
-		ctx.fillStyle = fillColor;
+	if (fill) {
+		ctx.fillStyle = color;
 		ctx.fill();
+	} else {
+		ctx.strokeStyle = color;
+		ctx.lineWidth = 1;
+		ctx.stroke();
+		updatePotential(Cell);
 	}
 }
 
 function eraseCell(Cell) {
 	// Draw a white circle overtop of the current Cell, effectively erasing it
 	// This does not delete the cell! Used for redrawing it (i.e. when it is selected).
-	var ctx = workspace.getContext("2d");
-	ctx.strokeStyle = '#fff';
-	ctx.lineWidth = Cell.lineWidth+2;
+	ctx.fillStyle = '#fff';
 	ctx.beginPath();
-	ctx.arc(Cell.x,Cell.y,Cell.r,0,2*Math.PI);
-	ctx.stroke();
+	ctx.arc(Cell.x,Cell.y,Cell.r+1,0,2*Math.PI);
+	ctx.fill();
 }
 
 function eraseCellInner(Cell) {
 	// Erase the inside of the cell, leaving the border
-	var ctx = workspace.getContext('2d');
 	ctx.fillStyle = 'rgb(255,255,255)';
 	ctx.beginPath();
 	ctx.arc(Cell.x, Cell.y, Cell.r-2, 0, 2*Math.PI);
@@ -260,20 +261,22 @@ function eraseCellInner(Cell) {
 }
 
 function redrawDendrites(Cell) {
+	// First erase them, then draw them again
 	for (let Dendrite of Cell.inputDendrites) {
-		drawDendrite(Dendrite);
+		drawDendrite(Dendrite, '#fff', 3)
+		drawDendrite(Dendrite, dendriteColor, 1);
 	}
 	for (let Dendrite of Cell.outputDendrites) {
-		drawDendrite(Dendrite)
+		drawDendrite(Dendrite, '#fff', 3)
+		drawDendrite(Dendrite, dendriteColor, 1)
 	}
 }
 
 function clearWorkspace() {
-	// Clear out Cells array
+	// Clear out arrays
 	Cells = [];
 	Dendrites = [];
 	// Erase workspace
-	var ctx = workspace.getContext("2d");
 	ctx.clearRect(0,0,500,500);
 	// Clear debug area
 	debug.innerHTML = '';
@@ -281,88 +284,69 @@ function clearWorkspace() {
 }
 
 function stimulate(Cell, power) {
-	if (Cell.potential + power >= Cell.threshold) {
-		fire(Cell);
-		// Recursively stimulate all output cells
+	oldPotentialRatio = Cell.potential / Cell.threshold;
+	Cell.potential = Cell.potential + power;
+	updatePotential(Cell, true, oldPotentialRatio);	
+	// Recursively stimulate all output cells
+	if (Cell.potential >= Cell.threshold) {
+		Cell.potential = 0;
 		if (Cell.outputCells.length > 0) {
 			for (var i = 0; i < Cell.outputCells.length; i++) {
 				stimulate(Cells[i], Cell.firePower);
 			}
 		}
-		Cell.potential = 0;
-	} else {
-		oldPotential = Cell.potential;
-		Cell.potential = Cell.potential + power;
-		updatePotential(Cell, true, oldPotential);
 	}
 	printMeshStateTable();
 }
 
-function updatePotential(Cell, animate = false, oldPotential = null) {
-	var ctx = workspace.getContext('2d');
-	// Erase old potential
+function updatePotential(Cell, animate = false, oldPotentialRatio = null) {
 	eraseCellInner(Cell);
-	potentialRatio = Cell.potential / Cell.threshold;
-
-	if (potentialRatio > 0) {
-		var target = 1.5*Math.PI + (potentialRatio*2*Math.PI); // 1.5*PI starts us at the top of the circle. Dang radians.
-		if (animate == true) {
-			// Instantly draw the current wedge
-			var oldPotentialRatio = oldPotential / Cell.threshold;
-			var start = 1.5*Math.PI + (oldPotentialRatio*2*Math.PI);
-			ctx.beginPath();
-			ctx.fillStyle = wedgeColor;
-			ctx.moveTo(Cell.x, Cell.y);
-			ctx.arc(Cell.x, Cell.y, Cell.r*0.75, 1.5*Math.PI, start);
-			ctx.fill();
-			// Animate the drawing of the wedge that represents accumulated potential
-			var progress = start;
-			var wedgeAnimation = setInterval(function() {
-						// End animation if the wedge has been drawn
-						if (progress >= target) {
-							clearInterval(wedgeAnimation);
-						} else {
-							ctx.arc(Cell.x, Cell.y, Cell.r*0.75, start, progress);
-							ctx.fill();
-						}
-						progress = progress + 3*Math.PI / 180; // Increment by 3-degree intervals
-				}, 20);
-		} else {
-			// Draw without animating
-			ctx.beginPath();
-			ctx.fillStyle = wedgeColor;
-			ctx.moveTo(Cell.x, Cell.y);
-			ctx.arc(Cell.x, Cell.y, Cell.r*0.75, 1.5*Math.PI, target);
-			ctx.fill();
-		}
+	if (Cell.potential > 0) {
+		var newPotentialRatio = Cell.potential / Cell.threshold;
+		drawPotentialWedge(Cell, animate, oldPotentialRatio, newPotentialRatio);
 	}
 }
 
-function fire(Cell) {
-	eraseCellInner(Cell);
-	// Instantly draw the current wedge
-	var ctx = workspace.getContext('2d');
-	var oldPotentialRatio = Cell.potential / Cell.threshold;
-	var start = 1.5*Math.PI + (oldPotentialRatio*2*Math.PI);
-	ctx.beginPath();
-	ctx.fillStyle = wedgeColor;
-	ctx.moveTo(Cell.x, Cell.y);
-	ctx.arc(Cell.x, Cell.y, Cell.r*0.75, 1.5*Math.PI, start);
-	ctx.fill();
-	var progress = start;
-	var wedgeAnimation = setInterval(function() {
-				// End animation if the wedge has been drawn
-				if (progress > 3.5*Math.PI) {	// Target is going all the way around and back up to the top of the circle
-					ctx.arc(Cell.x, Cell.y, Cell.r*0.75, 0, 2*Math.PI);
-					ctx.fill();
-					clearInterval(wedgeAnimation);
-					setTimeout(updatePotential, 500, Cell);
-				} else {
-					ctx.arc(Cell.x, Cell.y, Cell.r*0.75, start, progress);
-					ctx.fill();
-				}
-				progress = progress + 3*Math.PI / 180; // Increment by 3-degree intervals
-		}, 20);
+function drawPotentialWedge(Cell, animate, oldPotentialRatio, newPotentialRatio) {	
+	var color = Cell.selected ? '#fff' : wedgeColor;
+	var target = 1.5*Math.PI + (newPotentialRatio*2*Math.PI); // 1.5*PI starts us at the top of the circle. Dang radians.
+	if (animate == true) {
+		// Instantly draw the old wedge
+		var start = 1.5*Math.PI + (oldPotentialRatio*2*Math.PI);
+		ctx.beginPath();
+		ctx.fillStyle = color;
+		ctx.moveTo(Cell.x, Cell.y);
+		ctx.arc(Cell.x, Cell.y, Cell.r*0.75, 1.5*Math.PI, start);
+		ctx.fill();
+		// Animate the drawing of the wedge that represents accumulated potential
+		var progress = start;
+		var wedgeAnimation = setInterval(function() {
+					if (progress < target) {
+						ctx.arc(Cell.x, Cell.y, Cell.r*0.75, start, progress);
+						ctx.fill();
+					} else {
+						// End animation if the wedge has been drawn
+						clearInterval(wedgeAnimation);
+						// If we have reached threshold, then complete the wedge-circle and reset after a sec
+						if (newPotentialRatio === 1) {
+							ctx.beginPath();
+							ctx.moveTo(Cell.x, Cell.y);
+							ctx.arc(Cell.x, Cell.y, Cell.r*0.75, 0, 2*Math.PI);
+							ctx.fill();
+						}
+						setTimeout(updatePotential, 2000, Cell);
+					}
+					progress = progress + 3*Math.PI / 180; // Increment by 3-degree intervals
+			}, 20);
+	} else {
+		// Draw without animating
+		ctx.beginPath();
+		ctx.fillStyle = color;
+		ctx.moveTo(Cell.x, Cell.y);
+		ctx.arc(Cell.x, Cell.y, Cell.r*0.75, 1.5*Math.PI, target);
+		ctx.fill();
+	}
+	
 }
 
 // DEBUG FUNCTIONS
