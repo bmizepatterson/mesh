@@ -2,8 +2,7 @@
 var Cells = [];
 var Dendrites = [];
 var drawingDendrite = false;
-var workspace = document.getElementById("workspace");
-var ctx = workspace.getContext("2d");
+var ctx = document.getElementById("workspace").getContext("2d");
 var debug = document.getElementById("debugspace");
 var highlightedCell = -1;
 var selectedCell = -1;
@@ -13,7 +12,7 @@ var textFill = '#000';
 var arrowWidth = 7;
 var highlightWidth = 3;
 var highlightOffset = 5;
-var selectColor = '#9c27b0';
+var selectColor = '#3f51b5';
 var cellColor = '#000';
 var highlightColor = '#3f51b5';
 var dendriteColor = '#777';
@@ -95,6 +94,12 @@ function workspaceMouseClick(event) {
 	if (drawingDendrite) {
 		if (collision instanceof Cell) {
 			// Abort if we're clicking on the selected cell again
+			eraseCell(collision);
+			collision.selected = false;
+			drawCell(collision, cellColor, false);
+			redrawDendrites(collision);
+			highlightCell(collision);
+			selectedCell = -1;
 
 			// Create a dendrite between the selected cell and this cell
 
@@ -117,7 +122,7 @@ function workspaceMouseClick(event) {
 			drawCell(collision, selectColor, true);
 			redrawDendrites(collision);
 			highlightCell(collision);
-			updatePotential(collision);
+			drawPotentialWedge(collision, false, 0, collision.potential / collision.threshold);
 			drawingDendrite = true;
 		} else if (!collision) {
 			// Add a cell at the current mouse location
@@ -212,18 +217,18 @@ function addCell(newCellX, newCellY, newRadius, newThreshold, newFirePower, init
 
 function highlightCell(Cell) {
 	// Draw a circle around a cell to highlight it
+	ctx.beginPath();
 	ctx.strokeStyle = highlightColor;
 	ctx.lineWidth = highlightWidth;
-	ctx.beginPath();
 	ctx.arc(Cell.x, Cell.y, Cell.r+highlightOffset, 0, 2*Math.PI);
 	ctx.stroke();
 }
 
 function unhighlightCell(Cell) {
 	// Cover up the circle around a cell
+	ctx.beginPath();
 	ctx.strokeStyle = '#fff';
 	ctx.lineWidth = highlightWidth+2;
-	ctx.beginPath();
 	ctx.arc(Cell.x, Cell.y, Cell.r+highlightOffset, 0, 2*Math.PI);
 	ctx.stroke();
 }
@@ -245,8 +250,8 @@ function drawCell(Cell, color, fill) {
 function eraseCell(Cell) {
 	// Draw a white circle overtop of the current Cell, effectively erasing it
 	// This does not delete the cell! Used for redrawing it (i.e. when it is selected).
-	ctx.fillStyle = '#fff';
 	ctx.beginPath();
+	ctx.fillStyle = '#fff';
 	ctx.arc(Cell.x,Cell.y,Cell.r+1,0,2*Math.PI);
 	ctx.fill();
 }
@@ -333,8 +338,8 @@ function drawPotentialWedge(Cell, animate, oldPotentialRatio, newPotentialRatio)
 							ctx.moveTo(Cell.x, Cell.y);
 							ctx.arc(Cell.x, Cell.y, Cell.r*0.75, 0, 2*Math.PI);
 							ctx.fill();
+							setTimeout(updatePotential, 500, Cell);
 						}
-						setTimeout(updatePotential, 2000, Cell);
 					}
 					progress = progress + 3*Math.PI / 180; // Increment by 3-degree intervals
 			}, 20);
