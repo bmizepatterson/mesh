@@ -84,9 +84,10 @@ function Cell(x, y, r, threshold, firePower, ctx) {
 			this.ctx.strokeStyle = color;
 			this.ctx.lineWidth = 1;
 			this.ctx.stroke();
-			if (this.potential > 0) {
-				this.drawPotentialWedge(ctx, false, 0, this.potential / this.threshold);
-			}
+		}
+		// Draw the wedge
+		if (this.potential > 0) {
+			this.drawPotentialWedge(ctx, false, 0, this.potential / this.threshold);
 		}
 	}
 
@@ -172,6 +173,27 @@ function Cell(x, y, r, threshold, firePower, ctx) {
 		this.ctx.lineWidth = highlightWidth+2;
 		this.ctx.arc(this.x, this.y, this.r+highlightOffset, 0, 2*Math.PI);
 		this.ctx.stroke();
+	}
+
+	this.select = function () {
+		// Set selected flags
+		selectedCell = this.id;
+		this.selected = true;
+		// Indicate selection by filling the circle
+		this.erase();
+		this.redrawDendrites();
+		this.draw(selectColor, true);
+		this.highlight();
+	}
+
+	this.unselect = function () {
+		// Set selected flags
+		selectedCell = -1;
+		this.selected = false;
+		// Redraw the circle
+		this.erase();
+		this.redrawDendrites();
+		this.draw(cellColor, false);
 	}
 
 	this.erase = function () {
@@ -260,46 +282,23 @@ function workspaceMouseClick(event) {
 		if (collision instanceof Cell) {
 			if (collision.selected) {
 				// If we're clicking on the original (selected) cell, then deselect it
-				collision.redrawDendrites();
-				collision.erase();
-				collision.selected = false;
-				collision.draw(cellColor, false);
+				collision.unselect();
 				collision.highlight();
-				selectedCell = -1;
 			} else {
 				// If we're clicking on a different (non-selected) cell, then create a dendrite between the selected cell and this cell
-				originCell = Cells[selectedCell];
-				destinationCell = collision;
-				// Determine coordinates of the new dendrite
-				addDendrite(originCell, destinationCell, originCell.x, originCell.y, destinationCell.x, destinationCell.y);
-
-				// Finally, deselect (but don't highlight) the origin cell
-				originCell.redrawDendrites();
-				originCell.erase();
-				originCell.selected = false;
-				originCell.draw(cellColor, false);
-				selectedCell = -1;
+				addDendrite(Cells[selectedCell], collision, Cells[selectedCell].x, Cells[selectedCell].y, collision.x, collision.y);
+				// Unselect (but don't highlight) the selected cell
+				Cells[selectedCell].unselect();
 			}
 		} else {
-			// Abort the dendrite creation and deselect the selected cell
-			Cells[selectedCell].erase();
-			Cells[selectedCell].selected = false;
-			Cells[selectedCell].redrawDendrites();
-			Cells[selectedCell].draw(cellColor, false);
-			selectedCell = -1;
+			// Deselect the selected cell
+			Cells[selectedCell].unselect();
 		}
 		drawingDendrite = false;
 	} else {		
 		if (collision instanceof Cell) {
 			// Select the cell and enter dendrite-drawing mode
-			collision.erase();
-			// Set selected flag
-			selectedCell = collision.id;
-			collision.selected = true;
-			collision.redrawDendrites();
-			collision.draw(selectColor, true);
-			collision.highlight();
-			collision.drawPotentialWedge(false, 0, collision.potential / collision.threshold);
+			collision.select();			
 			drawingDendrite = true;
 		} else if (!collision) {
 			// Add a cell at the current mouse location
