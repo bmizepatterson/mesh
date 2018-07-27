@@ -270,20 +270,20 @@ function Dendrite(originCell = null, destinationCell, startX, startY, endX, endY
 			} else if (this.endX < this.startX) {
 				x1 = Math.round(this.midpointX + Math.cos(arrowAngle + Math.asin(2*(this.midpointY-this.destinationCell.y)/this.length))*arrowWidth/(2*Math.sin(arrowAngle)));
 				y1 = Math.round(this.midpointY + Math.sin(arrowAngle + Math.asin(2*(this.midpointY-this.destinationCell.y)/this.length))*arrowWidth/(2*Math.sin(arrowAngle)));
-				x2 = Math.round(this.midpointX - Math.cos(arrowAngle + Math.asin(2*(this.midpointY-this.destinationCell.y)/this.length))*arrowWidth/(2*Math.sin(arrowAngle)));
-				y2 = Math.round(this.midpointY - Math.sin(arrowAngle + Math.asin(2*(this.midpointY-this.destinationCell.y)/this.length))*arrowWidth/(2*Math.sin(arrowAngle)));
+				x2 = Math.round(this.midpointX + Math.cos(arrowAngle - Math.asin(2*(this.midpointY-this.destinationCell.y)/this.length))*arrowWidth/(2*Math.sin(arrowAngle)));
+				y2 = Math.round(this.midpointY - Math.sin(arrowAngle - Math.asin(2*(this.midpointY-this.destinationCell.y)/this.length))*arrowWidth/(2*Math.sin(arrowAngle)));
 			} else {
 				// This dendrite is vertical
 				// Should it point up or down?
 				x1 = Math.round(this.midpointX - arrowWidth/2);
 				x2 = Math.round(this.midpointX + arrowWidth/2);
+				// Y values are the same if it's pointing up or down
 				if (this.startY < this.endY) {
 					// Point up
-					// Y values are the same if it's pointing up
-					y1 = y2 = Math.round(this.midpointY + arrowWidth/(2*Math.tan(arrowAngle)));
+					y1 = y2 = Math.round(this.midpointY - arrowWidth/(2*Math.tan(arrowAngle)));
 				} else {
 					// Point down
-					y1 = y2 = Math.round(this.midpointY - arrowWidth/(2*Math.tan(arrowAngle)));
+					y1 = y2 = Math.round(this.midpointY + arrowWidth/(2*Math.tan(arrowAngle)));
 				}
 			}
 			document.getElementById("arrowCoords").innerHTML = '('+x2+', '+y2+'); ('+this.midpointX+', '+this.midpointY+')';
@@ -307,7 +307,7 @@ function Dendrite(originCell = null, destinationCell, startX, startY, endX, endY
 	    	this.ctx.moveTo(this.arrowCoords[0], this.arrowCoords[1]);
 	    	this.ctx.lineTo(Math.round(this.midpointX), Math.round(this.midpointY));
 	    	this.ctx.lineTo(this.arrowCoords[2], this.arrowCoords[3]);
-	    	this.ctx.stroke();
+	    	this.ctx.fill();
 
 	    	// this.ctx.beginPath();
 	    	// this.ctx.fillStyle = 'blue';	    	
