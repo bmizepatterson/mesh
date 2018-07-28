@@ -11,7 +11,7 @@ var selectedCell = -1;
 var arrowWidth = 16;
 var arrowAngle = Math.PI*0.15 // Must be in radians
 var highlightWidth = 3;
-var highlightOffset = 5;
+var highlightOffset = 4;
 var cellBuffer = 30;
 var selectColor = '#3f51b5';
 var cellColor = '#000';
@@ -123,6 +123,7 @@ function Cell(x, y, r, threshold, firePower, ctx) {
 								cell.fire(stimulateChildren);
 							}
 							clearInterval(wedgeAnimation);	// End animation
+							printMeshStateTable();
 						}
 						progress = progress + 10*Math.PI / 180; // Increment by 10-degree intervals (Screw radians!)
 				}, 10);
@@ -251,14 +252,12 @@ function Cell(x, y, r, threshold, firePower, ctx) {
 		var newPotential = oldPotential + power;
 		oldPotentialRatio = oldPotential / this.threshold;
 		newPotentialRatio = newPotential / this.threshold;
-		this.drawPotentialWedge(true, oldPotentialRatio, newPotentialRatio, true);
-		// Recursively stimulate all output cells
+		this.potential = newPotential;		
+		printMeshStateTable();
 		if (newPotential >= this.threshold) {
 			this.potential = 0;			
-		} else {
-			this.potential = newPotential;		
 		}
-		printMeshStateTable();
+		this.drawPotentialWedge(true, oldPotentialRatio, newPotentialRatio, true);
 	}
 
 	this.stimulateChildren = function () {
@@ -506,7 +505,7 @@ function printMeshStateTable() {
 
 	var html = '';
 	// Setup table columns
-	html += '<table class="w3-table-all w3-small"><tr><th>Cell ID</th><th>Coordinates</th><th>Potential</th><th>Threshold</th><th>Fire Power</th><th>Input Dendrites</th><th>Output Dendrites</th></tr>';
+	html += '<table class="w3-table-all w3-tiny"><tr><th>Cell</th><th>Coord.</th><th>Potential</th><th>Threshold</th><th>Power</th><th>Inputs</th><th>Outputs</th></tr>';
 	for (var i = 0; i < Cells.length; i++) {
 		html += '<tr id="cellRow'+i+'""><td>' + Cells[i].id + '</td><td>(' + Cells[i].x + ', ' + Cells[i].y + ')</td><td>' + Cells[i].potential + '</td><td>' + Cells[i].threshold + '</td><td>' + Cells[i].firePower + '</td><td>' + Cells[i].inputDendrites.length + '</td><td>' + Cells[i].outputDendrites.length + '</td></tr>';
 	}

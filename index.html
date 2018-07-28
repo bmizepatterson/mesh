@@ -13,8 +13,7 @@
 			margin:0;
 		}
 		#debugspace {
-			margin-bottom:32px;
-			margin-top:32px;
+			margin-top:20px;
 		}
 		#watchlist {
 			margin-top:16px;
@@ -31,50 +30,53 @@
 	<div class="w3-container">
 		<h1 style="margin-bottom:0;">Mesh</h1>
 		<p class="w3-text-gray w3-small" style="margin-top:0px;"><em>A graphical neural network simulator</em></p>
-	</div>
-	
-	<div class="w3-row-padding">
-		<div class="w3-col s4">
-			<p>Click anywhere in the box to add a cell body.</p>
-			<p>Click on a cell to select it. Then click on another cell to connect them.</p>
-			<p>Click "Start" to provide input to the first cell and see how it propogates through the network!</p>
-			<div class="w3-bar">
-				<button id="startStimulate" onclick="clickStimulateButton()" class="w3-bar-item w3-button w3-indigo w3-border w3-border-white" style="width:50%;">Start</button>
-				<button id="stopStimulate" onclick="stopStimulate()" class="w3-bar-item w3-button w3-red w3-border w3-border-white" style="width:50%;display:none;">Stop</button>
-				<button id="stepStimulate" onclick="Cells[0].stimulate(1)" class="w3-bar-item w3-button w3-blue w3-border w3-border-white" style="width:50%;">Step</button>
+		<p>Click anywhere in the box to add a cell body. Click on a cell to select it. Then click on another cell to connect them. Click "Start" to provide input to the first cell and see how it propogates through the network!</p>
+		
+		<div class="w3-row">		
+			
+			<div class="w3-col" style="width:502px;">
+				<p id="tip" class="w3-text-indigo w3-center w3-small" style="height:20px;">&nbsp;</p>
+				<div class="w3-border">
+
+					<canvas id="workspace"  onclick="workspaceMouseClick(event)" onmousemove="workspaceMove(event)" onmouseout="clearCoor()" width="500" height="500"></canvas>
+					
+					<div class="w3-bar">
+						<button id="startStimulate" onclick="clickStimulateButton()" class="w3-bar-item w3-button w3-indigo" style="width:33.33%;">Start</button>
+						<button id="stopStimulate" onclick="stopStimulate()" class="w3-bar-item w3-button w3-red" style="width:33.33%;display:none;">Stop</button>
+						<button id="stepStimulate" onclick="Cells[0].stimulate(1)" class="w3-bar-item w3-button w3-blue" style="width:33.33%;">Step</button>
+						<button id="clearWorkspace" onclick="clearWorkspace()" class="w3-button w3-block w3-black" style="width:33.33%;">Reset</button>
+					</div>
+				</div>
+					
+				<p id="cellInfo" class="w3-small w3-right-align w3-text-gray" style="height:20px;">&nbsp;</p>
+
+				<div id="watchlist">
+					<p>Mouse: <span id="mousecoords"></span></p>
+					<p>drawingDendrite = <span id="drawingDendrite"></span></p>
+					<p>selectedCell = <span id="selectedCell"></span></p>
+					<p>highlightedCell = <span id="highlightedCell"></span></p>
+					<p>stimulation in progress: <span id="stimulateCheck"></span></p>
+				</div>
 			</div>
-			<div>
-				<button id="clearWorkspace" onclick="clearWorkspace()" class="w3-button w3-block w3-black w3-border w3-border-white">Reset</button>
-			</div>
-			<div>
-				<h4>Settings for new cells:</h4>
-				<table style="width:100%;">
+
+			<div class="w3-rest w3-container">	
+
+				<table class="w3-table w3-border w3-small" style="margin-top:20px;">
+					<tr><th colspan="3"><p>Settings for new cells:</p></th></tr>
 					<tr><td><label for="thresholdSetting">Threshold:</label></td>
 						<td><input type="range" id="thresholdSetting" name="thresholdSetting" min="1" max="9" value="5" onchange="updateThresholdValue()" onmousemove="updateThresholdValue()" style="width:100%;"></td>
 				 		<td style="text-align:center;"><span id="thresholdValue">5</span></td></tr>
 				 	<tr><td><label for="firepowerSetting">Power:</label></td>
-				 		<td><input type="range" id="firepowerSetting" name="firepowerSetting" min="1" max="9" value="5" onchange="updateFirepowerValue()" onmousemove="updateFirepowerValue()" style="width:100%;"></td>
-				 		<td style="text-align:center;"><span id="firepowerValue">5</span></td></tr>
-				 </table>
-			</div>
+				 		<td><input type="range" id="firepowerSetting" name="firepowerSetting" min="1" max="9" value="1" onchange="updateFirepowerValue()" onmousemove="updateFirepowerValue()" style="width:100%;"></td>
+				 		<td style="text-align:center;"><span id="firepowerValue">1</span></td></tr>
+				 </table>	
 
-			<div id="watchlist">
-				<p>Mouse: <span id="mousecoords"></span></p>
-				<p>drawingDendrite = <span id="drawingDendrite"></span></p>
-				<p>selectedCell = <span id="selectedCell"></span></p>
-				<p>highlightedCell = <span id="highlightedCell"></span></p>
-				<p>stimulation in progress: <span id="stimulateCheck"></span></p>
+				<div id="debugspace" style="overflow-y:auto;"></div>
+
 			</div>
-		</div>
-		
-		<div class="w3-col s8">
-			<p id="tip" class="w3-text-indigo w3-center" style="width:500px;">&nbsp;</p>
-			<canvas id="workspace"  onclick="workspaceMouseClick(event)" onmousemove="workspaceMove(event)" onmouseout="clearCoor()" class="w3-border" width="500" height="500"></canvas>
-			<p id="cellInfo" class="w3-small w3-right-align w3-text-gray" style="width:500px;">&nbsp;</p>
 		</div>
 	</div>
 
-	<div id="debugspace" class="w3-container"></div>
 
 	<script src="mesh.js"></script>
 </body>
