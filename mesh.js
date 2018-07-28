@@ -184,6 +184,11 @@ function Cell(x, y, r, threshold, firePower, ctx) {
 		this.ctx.lineWidth = highlightWidth;
 		this.ctx.arc(this.x, this.y, this.r+highlightOffset, 0, 2*Math.PI);
 		this.ctx.stroke();
+		// Highlight this row on the cell table
+		var row = document.getElementById("cellRow"+this.id);
+		for (var i = 0; i < row.children.length; i++) {
+			row.children[i].style.backgroundColor = "#ffffcc";
+		}
 	}
 
 	this.unhighlight = function () {
@@ -196,6 +201,11 @@ function Cell(x, y, r, threshold, firePower, ctx) {
 		this.ctx.lineWidth = highlightWidth+2;
 		this.ctx.arc(this.x, this.y, this.r+highlightOffset, 0, 2*Math.PI);
 		this.ctx.stroke();
+		// Unhighlight this row on the cell table
+		var row = document.getElementById("cellRow"+this.id);
+		for (var i = 0; i < row.children.length; i++) {
+			row.children[i].style.backgroundColor = "initial";
+		}
 	}
 
 	this.select = function () {
@@ -399,11 +409,12 @@ function workspaceMouseClick(event) {
 			if (checkForCollision(x,y,newRadius+cellBuffer)) {
 				displayTip("There is not enough room to place a cell here.", 5000);
 			} else {
-				addCell(x, y, newRadius, 3, 1);
+				var threshold = document.getElementById("thresholdSetting").value;
+				var firepower = document.getElementById("firepowerSetting").value;
+				addCell(x, y, newRadius, threshold, firepower);
 			}
 		}
 	}
-	printMeshStateTable();
 }
 
 function workspaceMove(event) {
@@ -444,6 +455,14 @@ function stopStimulate() {
 	}
 }
 
+function updateThresholdValue() {
+	document.getElementById("thresholdValue").innerHTML = document.getElementById("thresholdSetting").value;
+}
+
+function updateFirepowerValue() {
+	document.getElementById("firepowerValue").innerHTML = document.getElementById("firepowerSetting").value;
+}
+
 function addDendrite(originCell = null, destinationCell, startX, startY, endX, endY) {
 	// Create a new Dendrite object
 	var newDen = new Dendrite(originCell, destinationCell, startX, startY, endX, endY, ctx);
@@ -456,6 +475,7 @@ function addDendrite(originCell = null, destinationCell, startX, startY, endX, e
 	}
 	destinationCell.inputDendrites.push(newDen);
 	newDen.draw(dendriteColor, 1);
+	printMeshStateTable();
 }
 
 function addCell(newCellX, newCellY, newRadius, newThreshold, newFirePower, initialHighlight = true) {
@@ -470,17 +490,16 @@ function addCell(newCellX, newCellY, newRadius, newThreshold, newFirePower, init
 	// Add the cell to the Cells array and draw it
 	newCell.id = Cells.length;
 	newCell.draw();
+	Cells.push(newCell);
+	printMeshStateTable();
 	if (initialHighlight) {
 		newCell.highlight();
 	}
-	Cells.push(newCell);
 	return newCell;
 }
-
-// DEBUG FUNCTIONS
-
+ 
 function printMeshStateTable() {
-	// Print nothing if not cells are present in the mesh
+	// Print nothing if no cells are present in the mesh
 	if (Cells.length === 0) {
 		return;
 	}
@@ -489,7 +508,7 @@ function printMeshStateTable() {
 	// Setup table columns
 	html += '<table class="w3-table-all w3-small"><tr><th>Cell ID</th><th>Coordinates</th><th>Potential</th><th>Threshold</th><th>Fire Power</th><th>Input Dendrites</th><th>Output Dendrites</th></tr>';
 	for (var i = 0; i < Cells.length; i++) {
-		html += '<tr><td>' + Cells[i].id + '</td><td>(' + Cells[i].x + ', ' + Cells[i].y + ')</td><td>' + Cells[i].potential + '</td><td>' + Cells[i].threshold + '</td><td>' + Cells[i].firePower + '</td><td>' + Cells[i].inputDendrites.length + '</td><td>' + Cells[i].outputDendrites.length + '</td></tr>';
+		html += '<tr id="cellRow'+i+'""><td>' + Cells[i].id + '</td><td>(' + Cells[i].x + ', ' + Cells[i].y + ')</td><td>' + Cells[i].potential + '</td><td>' + Cells[i].threshold + '</td><td>' + Cells[i].firePower + '</td><td>' + Cells[i].inputDendrites.length + '</td><td>' + Cells[i].outputDendrites.length + '</td></tr>';
 	}
 	html += '</table>';
 	debug.innerHTML = html;

@@ -46,7 +46,21 @@
 			<div class="field-group">
 				<button id="stepStimulate" onclick="Cells[0].stimulate(1)" class="w3-btn w3-block w3-indigo">Step</button>
 			</div>
-			<button id="clearWorkspace" onclick="clearWorkspace()" class="w3-btn w3-block w3-black">Reset</button>
+			<div class="field-group">
+				<button id="clearWorkspace" onclick="clearWorkspace()" class="w3-btn w3-block w3-black">Reset</button>
+			</div>
+			<div class="field-group">
+				<h4>Settings for new cells:</h4>
+				<table class="w3-container" style="width:100%;">
+					<tr><td><label for="thresholdSetting">Threshold:</label></td>
+						<td><input type="range" id="thresholdSetting" name="thresholdSetting" min="1" max="9" value="5" onmousemove="updateThresholdValue()" style="width:100%;"></td>
+				 		<td style="text-align:center;"><span id="thresholdValue">5</span></td></tr>
+				 	<tr><td><label for="firepowerSetting">Fire Power:</label></td>
+				 		<td><input type="range" id="firepowerSetting" name="firepowerSetting" min="1" max="9" value="5" onmousemove="updateFirepowerValue()" style="width:100%;"></td>
+				 		<td style="text-align:center;"><span id="firepowerValue">5</span></td></tr>
+				 </table>
+			</div>
+
 			<div id="watchlist">
 				<p>Mouse: <span id="mousecoords"></span></p>
 				<p>drawingDendrite = <span id="drawingDendrite"></span></p>
