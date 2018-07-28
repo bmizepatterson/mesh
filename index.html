@@ -13,6 +13,9 @@
 			font-style:italic;
 			margin:0;
 		}
+		#cellInfo {
+			margin:0;
+		}
 		#debugspace {
 			margin-bottom:32px;
 			margin-top:32px;
@@ -53,10 +56,10 @@
 				<h4>Settings for new cells:</h4>
 				<table class="w3-container" style="width:100%;">
 					<tr><td><label for="thresholdSetting">Threshold:</label></td>
-						<td><input type="range" id="thresholdSetting" name="thresholdSetting" min="1" max="9" value="5" onmousemove="updateThresholdValue()" style="width:100%;"></td>
+						<td><input type="range" id="thresholdSetting" name="thresholdSetting" min="1" max="9" value="5" onchange="updateThresholdValue()" onmousemove="updateThresholdValue()" style="width:100%;"></td>
 				 		<td style="text-align:center;"><span id="thresholdValue">5</span></td></tr>
-				 	<tr><td><label for="firepowerSetting">Fire Power:</label></td>
-				 		<td><input type="range" id="firepowerSetting" name="firepowerSetting" min="1" max="9" value="5" onmousemove="updateFirepowerValue()" style="width:100%;"></td>
+				 	<tr><td><label for="firepowerSetting">Power:</label></td>
+				 		<td><input type="range" id="firepowerSetting" name="firepowerSetting" min="1" max="9" value="5" onchange="updateFirepowerValue()" onmousemove="updateFirepowerValue()" style="width:100%;"></td>
 				 		<td style="text-align:center;"><span id="firepowerValue">5</span></td></tr>
 				 </table>
 			</div>
@@ -71,8 +74,9 @@
 		</div>
 		
 		<div class="w3-col s8">
-			<p id="tip" class="w3-text-indigo w3-center w3-small" style="width:500px;">&nbsp;</p>
+			<p id="tip" class="w3-text-indigo w3-center" style="width:500px;">&nbsp;</p>
 			<canvas id="workspace"  onclick="workspaceMouseClick(event)" onmousemove="workspaceMove(event)" onmouseout="clearCoor()" class="w3-border" width="500" height="500"></canvas>
+			<p id="cellInfo" class="w3-small w3-right-align w3-text-gray" style="width:500px;">&nbsp;</p>
 		</div>
 	</div>
 

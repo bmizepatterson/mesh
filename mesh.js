@@ -189,6 +189,8 @@ function Cell(x, y, r, threshold, firePower, ctx) {
 		for (var i = 0; i < row.children.length; i++) {
 			row.children[i].style.backgroundColor = "#ffffcc";
 		}
+		// Display the cell info below the canvas
+		document.getElementById("cellInfo").innerHTML = "Current Potential: "+this.potential+"; Threshold: "+this.threshold+"; Power: "+this.firePower;
 	}
 
 	this.unhighlight = function () {
@@ -206,6 +208,7 @@ function Cell(x, y, r, threshold, firePower, ctx) {
 		for (var i = 0; i < row.children.length; i++) {
 			row.children[i].style.backgroundColor = "initial";
 		}
+		document.getElementById("cellInfo").innerHTML = "";
 	}
 
 	this.select = function () {
