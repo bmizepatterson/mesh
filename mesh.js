@@ -1,4 +1,5 @@
 // Global variables
+var stimulationInProgress = false;	// False or the timer ID of the stimulation in progress
 var Cells = [];
 var Dendrites = [];
 var drawingDendrite = false;
@@ -39,6 +40,7 @@ function watch() {
 	document.getElementById("drawingDendrite").innerHTML = drawingDendrite;
 	document.getElementById("highlightedCell").innerHTML = highlightedCell;
 	document.getElementById("selectedCell").innerHTML = selectedCell;
+	document.getElementById("stimulateCheck").innerHTML = stimulationInProgress;
 }
 
 function checkForCollision(x,y,radius = 0) {
@@ -125,7 +127,7 @@ function Cell(x, y, r, threshold, firePower, ctx) {
 							}
 							clearInterval(wedgeAnimation);	// End animation
 						}
-						progress = progress + 3*Math.PI / 180; // Increment by 3-degree intervals (Screw radians!)
+						progress = progress + 10*Math.PI / 180; // Increment by 10-degree intervals (Screw radians!)
 				}, 10);
 		} else {
 			// Draw without animating
@@ -138,7 +140,7 @@ function Cell(x, y, r, threshold, firePower, ctx) {
 
 	this.fire = function (stimulateChildren) {
 		// Complete the wedge-circle, stimulate children, and reset after a sec
-		this.ctx.fillStyle = 'rgb(255,0,0)';
+		this.ctx.fillStyle = '#ffc107';
 		this.ctx.beginPath();
 		this.ctx.moveTo(this.x, this.y);
 		this.ctx.arc(this.x, this.y, this.r*0.8, 0, 2*Math.PI);
@@ -421,6 +423,24 @@ function workspaceMove(event) {
 	} else {
 		// Draw a circle around the collision
 		collision.highlight();
+	}
+}
+
+function clickStimulateButton() {
+	document.getElementById("stopStimulate").style.display = "block";
+	document.getElementById("startStimulate").style.display = "none";
+	document.getElementById("stepStimulate").disabled = true;
+	Cells[0].stimulate(1);
+	stimulationInProgress = setInterval(function() { Cells[0].stimulate(1); }, 1000);
+}
+
+function stopStimulate() {
+	if (stimulationInProgress) {
+		clearInterval(stimulationInProgress);
+		stimulationInProgress = false;
+		document.getElementById("stopStimulate").style.display = "none";
+		document.getElementById("startStimulate").style.display = "block";
+		document.getElementById("stepStimulate").disabled = false;
 	}
 }
 

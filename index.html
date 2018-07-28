@@ -5,7 +5,7 @@
 	<link rel="stylesheet" type="text/css" href="https://www.w3schools.com/w3css/4/w3.css">
 	<link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
 	<style>
-		.button-group {
+		.field-group {
 			margin-top:16px;
 			margin-bottom: 16px;
 		}
@@ -38,17 +38,21 @@
 		<div class="w3-col s4">
 			<p>Click anywhere in the box to add a cell body.</p>
 			<p>Click on a cell to select it. Then click on another cell to connect them.</p>
-			<p>Click the "Stimulate" button to provide input to the first cell and see how it propogates throughout the network!</p>
-			<div class="button-group">
-				<button id="stimulate" onclick="Cells[0].stimulate(1)" class="w3-button w3-block w3-indigo">Stimulate</button>
+			<p>Click "Start" to provide input to the first cell and see how it propogates through the network!</p>
+			<div class="field-group">
+				<button id="startStimulate" onclick="clickStimulateButton()" class="w3-btn w3-block w3-indigo">Start</button>
+				<button id="stopStimulate" onclick="stopStimulate()" class="w3-btn w3-block w3-red" style="display:none;">Stop</button>
 			</div>
-			<button id="clearWorkspace" onclick="clearWorkspace()" class="w3-button w3-block w3-black">Reset</button>
+			<div class="field-group">
+				<button id="stepStimulate" onclick="Cells[0].stimulate(1)" class="w3-btn w3-block w3-indigo">Step</button>
+			</div>
+			<button id="clearWorkspace" onclick="clearWorkspace()" class="w3-btn w3-block w3-black">Reset</button>
 			<div id="watchlist">
 				<p>Mouse: <span id="mousecoords"></span></p>
 				<p>drawingDendrite = <span id="drawingDendrite"></span></p>
 				<p>selectedCell = <span id="selectedCell"></span></p>
 				<p>highlightedCell = <span id="highlightedCell"></span></p>
-				<p>Arrow: <span id="arrowCoords"></span></p>
+				<p>stimulation in progress: <span id="stimulateCheck"></span></p>
 			</div>
 		</div>
 		
