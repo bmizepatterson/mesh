@@ -94,7 +94,7 @@ function Cell(x, y, r, threshold, firePower, ctx) {
 		}
 	}
 
-	this.drawPotentialWedge = function (animate, oldPotentialRatio = null, newPotentialRatio) {	
+	this.drawPotentialWedge = function (animate, oldPotentialRatio = null, newPotentialRatio, stimulateChildren = false) {	
 		if (animate && oldPotentialRatio == null) {
 			console.log('oldPotentialRatio must be passed to Cell::drawPotentialWedge() if animating.');
 		}
@@ -119,19 +119,13 @@ function Cell(x, y, r, threshold, firePower, ctx) {
 							cell.ctx.arc(cell.x, cell.y, cell.r*0.75, start, progress);
 							cell.ctx.fill();
 						} else {
-							// If we have reached threshold, then complete the wedge-circle and reset after a sec
+							// If the cell has reached its threshold, then it fires
 							if (newPotentialRatio === 1) {
-								cell.ctx.fillStyle = 'rgb(255,0,0)';
-								cell.ctx.beginPath();
-								cell.ctx.moveTo(cell.x, cell.y);
-								cell.ctx.arc(cell.x, cell.y, cell.r*0.8, 0, 2*Math.PI);
-								cell.ctx.fill();
-								window.setTimeout(function() { cell.eraseInner(); cell.drawPotentialWedge(true, 0, cell.potential/cell.threshold); } , 250);
+								cell.fire(stimulateChildren);
 							}
-							// End animation
-							clearInterval(wedgeAnimation);
+							clearInterval(wedgeAnimation);	// End animation
 						}
-						progress = progress + 3*Math.PI / 180; // Increment by 3-degree intervals
+						progress = progress + 3*Math.PI / 180; // Increment by 3-degree intervals (Screw radians!)
 				}, 10);
 		} else {
 			// Draw without animating
@@ -140,6 +134,30 @@ function Cell(x, y, r, threshold, firePower, ctx) {
 			this.ctx.arc(this.x, this.y, this.r*0.75, 1.5*Math.PI, target);
 			this.ctx.fill();
 		}		
+	}
+
+	this.fire = function (stimulateChildren) {
+		// Complete the wedge-circle, stimulate children, and reset after a sec
+		this.ctx.fillStyle = 'rgb(255,0,0)';
+		this.ctx.beginPath();
+		this.ctx.moveTo(this.x, this.y);
+		this.ctx.arc(this.x, this.y, this.r*0.8, 0, 2*Math.PI);
+		this.ctx.fill();
+		var parentCell = this;
+		var fn;
+		if (stimulateChildren) {
+			fn = function () {
+				parentCell.eraseInner(); 
+				parentCell.drawPotentialWedge(true, 0, parentCell.potential/parentCell.threshold);
+				parentCell.stimulateChildren();
+			};
+		} else {
+			fn = function () {
+				parentCell.eraseInner(); 
+				parentCell.drawPotentialWedge(true, 0, parentCell.potential/parentCell.threshold);
+			};
+		}
+		window.setTimeout(fn, 250);
 	}
 
 	this.redrawDendrites = function () {
@@ -221,19 +239,22 @@ function Cell(x, y, r, threshold, firePower, ctx) {
 		var newPotential = oldPotential + power;
 		oldPotentialRatio = oldPotential / this.threshold;
 		newPotentialRatio = newPotential / this.threshold;
-		this.drawPotentialWedge(true, oldPotentialRatio, newPotentialRatio);
+		this.drawPotentialWedge(true, oldPotentialRatio, newPotentialRatio, true);
 		// Recursively stimulate all output cells
 		if (newPotential >= this.threshold) {
-			this.potential = 0;
-			if (this.outputDendrites.length > 0) {
-				for (var i = 0; i < this.outputDendrites.length; i++) {
-					this.outputDendrites[i].destinationCell.stimulate(this.firePower);
-				}
-			}
+			this.potential = 0;			
 		} else {
 			this.potential = newPotential;		
 		}
 		printMeshStateTable();
+	}
+
+	this.stimulateChildren = function () {
+		if (this.outputDendrites.length > 0) {
+			for (var i = 0; i < this.outputDendrites.length; i++) {
+				this.outputDendrites[i].destinationCell.stimulate(this.firePower);
+			}
+		}
 	}
 }
 
