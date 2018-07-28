@@ -23,6 +23,9 @@ var wedgeColor = 'rgb(50,50,50)';
 
 // Utility functions
 function load() {
+	// Start with a white background
+	ctx.fillStyle = '#fff';
+	ctx.fillRect(0,0,500,500);
 	workspaceSetup();
 	setInterval(watch, 100);
 }
@@ -48,17 +51,6 @@ function checkForCollision(x,y,radius = 0) {
 		}
 	}
 	return collision;
-}
-
-function clearWorkspace() {
-	// Clear out arrays
-	Cells = [];
-	Dendrites = [];
-	// Erase workspace
-	ctx.clearRect(0,0,500,500);
-	// Clear debug area
-	debug.innerHTML = '';
-	workspaceSetup();
 }
 
 function displayTip(text, time = 5000) {
@@ -322,6 +314,18 @@ function Dendrite(originCell = null, destinationCell, startX, startY, endX, endY
 	    	this.destinationCell.draw();
 		}
 	}
+}
+
+function clearWorkspace() {
+	// Clear out arrays
+	Cells = [];
+	Dendrites = [];
+	// Erase workspace
+	ctx.fillStyle = '#fff';
+	ctx.fillRect(0,0,500,500);
+	// Clear debug area
+	debug.innerHTML = '';
+	workspaceSetup();
 }
 
 function workspaceSetup() {
