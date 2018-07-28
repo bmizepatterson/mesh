@@ -1,8 +1,9 @@
 // Global variables
 var Cells = [];
 var Dendrites = [];
+var Pulses = [];
 var drawingDendrite = false;
-var dendriteLimit = 10;
+var dendriteLimit = 20;
 var ctx = document.getElementById("workspace").getContext("2d");
 var debug = document.getElementById("debugspace");
 var highlightedCell = -1;
@@ -337,6 +338,45 @@ function Dendrite(originCell = null, destinationCell, startX, startY, endX, endY
 	}
 }
 
+function Pulse(x, y, r, dx, dy, ctx) {
+	this.x = x;
+	this.y = y;
+	this.dx = dx;
+	this.dy = dy;
+	this.r = r;
+	this.color = 'rgb(255,0,0)';
+	this.ctx = ctx;
+
+	this.draw = function() {
+      this.ctx.beginPath();
+      this.ctx.arc(this.x, this.y, this.radius, 0, Math.PI*2, false);
+      this.ctx.strokeStyle = 'black';
+      this.ctx.fillStyle = this.color;
+      this.ctx.fill();
+      this.ctx.stroke();
+    }
+
+	//reverse the x or y coordinates when the circle touches the side
+    this.update = function() {
+		if (this.x + this.radius > 500 || this.x - this.radius < 0) {
+			this.dx = -this.dx;
+		}
+		if (this.y + this.radius > 500 || this.y - this.radius < 0) {
+			this.dy = -this.dy;
+		}
+		this.x += this.dx;
+		this.y += this.dy;
+		this.draw();
+	}
+
+	this.animate = function() {
+		this.ctx.clearRect(this.x-this.r,this.y-this.r,2*this.r,2*this.r);
+		for (let i = 0; i < Pulses.length; i++){
+		    Pulses[i].update();
+		}
+	}
+}
+
 function clearWorkspace() {
 	// Clear out arrays
 	Cells = [];
@@ -357,6 +397,11 @@ function workspaceSetup() {
 	// because the first cell is stimulated by clicking the "stimulate" button.
 	addDendrite(null, firstCell, 0, firstCell.y, firstCell.x-firstCell.r, firstCell.y);
 	printMeshStateTable();
+
+	var testPulse = new Pulse(100, 100, 30, 5, 5, ctx);
+	Pulses.push(testPulse);
+	requestAnimationFrame(testPulse.animate);
+
 }
 
 function workspaceMouseClick(event) {
