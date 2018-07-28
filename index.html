@@ -5,10 +5,6 @@
 	<link rel="stylesheet" type="text/css" href="https://www.w3schools.com/w3css/4/w3.css">
 	<link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
 	<style>
-		.field-group {
-			margin-top:16px;
-			margin-bottom: 16px;
-		}
 		#tip {
 			font-style:italic;
 			margin:0;
@@ -42,19 +38,17 @@
 			<p>Click anywhere in the box to add a cell body.</p>
 			<p>Click on a cell to select it. Then click on another cell to connect them.</p>
 			<p>Click "Start" to provide input to the first cell and see how it propogates through the network!</p>
-			<div class="field-group">
-				<button id="startStimulate" onclick="clickStimulateButton()" class="w3-btn w3-block w3-indigo">Start</button>
-				<button id="stopStimulate" onclick="stopStimulate()" class="w3-btn w3-block w3-red" style="display:none;">Stop</button>
+			<div class="w3-bar">
+				<button id="startStimulate" onclick="clickStimulateButton()" class="w3-bar-item w3-button w3-indigo w3-border w3-border-white" style="width:50%;">Start</button>
+				<button id="stopStimulate" onclick="stopStimulate()" class="w3-bar-item w3-button w3-red w3-border w3-border-white" style="width:50%;display:none;">Stop</button>
+				<button id="stepStimulate" onclick="Cells[0].stimulate(1)" class="w3-bar-item w3-button w3-blue w3-border w3-border-white" style="width:50%;">Step</button>
 			</div>
-			<div class="field-group">
-				<button id="stepStimulate" onclick="Cells[0].stimulate(1)" class="w3-btn w3-block w3-indigo">Step</button>
+			<div>
+				<button id="clearWorkspace" onclick="clearWorkspace()" class="w3-button w3-block w3-black w3-border w3-border-white">Reset</button>
 			</div>
-			<div class="field-group">
-				<button id="clearWorkspace" onclick="clearWorkspace()" class="w3-btn w3-block w3-black">Reset</button>
-			</div>
-			<div class="field-group">
+			<div>
 				<h4>Settings for new cells:</h4>
-				<table class="w3-container" style="width:100%;">
+				<table style="width:100%;">
 					<tr><td><label for="thresholdSetting">Threshold:</label></td>
 						<td><input type="range" id="thresholdSetting" name="thresholdSetting" min="1" max="9" value="5" onchange="updateThresholdValue()" onmousemove="updateThresholdValue()" style="width:100%;"></td>
 				 		<td style="text-align:center;"><span id="thresholdValue">5</span></td></tr>
