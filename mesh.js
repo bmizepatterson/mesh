@@ -2,6 +2,7 @@
 var Cells = [];
 var Dendrites = [];
 var drawingDendrite = false;
+var dendriteLimit = 10;
 var ctx = document.getElementById("workspace").getContext("2d");
 var debug = document.getElementById("debugspace");
 var highlightedCell = -1;
@@ -9,10 +10,11 @@ var selectedCell = -1;
 var textAlign = 'center';
 var font = '12px sans-serif';
 var textFill = '#000';
-var arrowWidth = 7;
-var arrowAngle = Math.PI/4 // 45 degrees
+var arrowWidth = 16;
+var arrowAngle = Math.PI*0.15 // Must be in radians
 var highlightWidth = 3;
 var highlightOffset = 5;
+var cellBuffer = 30;
 var selectColor = '#3f51b5';
 var cellColor = '#000';
 var highlightColor = '#3f51b5';
@@ -36,10 +38,10 @@ function watch() {
 	document.getElementById("selectedCell").innerHTML = selectedCell;
 }
 
-function checkForCollision(x,y) {
+function checkForCollision(x,y,radius = 0) {
 	var collision = false;
 	for (var i = 0; i < Cells.length; i++) {
-		if (distance(x, y, Cells[i].x, Cells[i].y) <= Cells[i].r) {
+		if (distance(x, y, Cells[i].x, Cells[i].y) <= Cells[i].r + radius) {
 			// If the distance between the mouse and this cell's center is less than this cell's radius, then we have a collision.
 			collision = Cells[i];
 			break;
@@ -59,6 +61,11 @@ function clearWorkspace() {
 	workspaceSetup();
 }
 
+function displayTip(text, time = 5000) {
+	document.getElementById("tip").innerHTML = text;
+	setTimeout(function () { document.getElementById("tip").innerHTML = '&nbsp;'; } , time);
+}
+
 // Object constructors
 function Cell(x, y, r, threshold, firePower, ctx) {
 	this.x = x;
@@ -75,7 +82,10 @@ function Cell(x, y, r, threshold, firePower, ctx) {
 	this.selected = false;
 	this.ctx = ctx;				// The drawing context of the HTML canvas
 
-	this.draw = function (color, fill) {
+	this.draw = function () {
+		var color = this.selected ? selectColor : cellColor;
+		var fill = this.selected ? true : false;
+
 		this.ctx.beginPath();
 		this.ctx.arc(this.x,this.y,this.r,0,2*Math.PI);
 		if (fill) {
@@ -88,7 +98,7 @@ function Cell(x, y, r, threshold, firePower, ctx) {
 		}
 		// Draw the wedge
 		if (this.potential > 0) {
-			this.drawPotentialWedge(ctx, false, 0, this.potential / this.threshold);
+			this.drawPotentialWedge(false, 0, this.potential / this.threshold);
 		}
 	}
 
@@ -124,7 +134,7 @@ function Cell(x, y, r, threshold, firePower, ctx) {
 								cell.ctx.moveTo(cell.x, cell.y);
 								cell.ctx.arc(cell.x, cell.y, cell.r*0.8, 0, 2*Math.PI);
 								cell.ctx.fill();
-								window.setTimeout(function() { cell.eraseInner(); } , 250);
+								window.setTimeout(function() { cell.eraseInner(); cell.drawPotentialWedge(true, 0, cell.potential/cell.threshold); } , 250);
 							}
 							// End animation
 							clearInterval(wedgeAnimation);
@@ -183,7 +193,7 @@ function Cell(x, y, r, threshold, firePower, ctx) {
 		// Indicate selection by filling the circle
 		this.erase();
 		this.redrawDendrites();
-		this.draw(selectColor, true);
+		this.draw();
 		this.highlight();
 	}
 
@@ -194,7 +204,7 @@ function Cell(x, y, r, threshold, firePower, ctx) {
 		// Redraw the circle
 		this.erase();
 		this.redrawDendrites();
-		this.draw(cellColor, false);
+		this.draw();
 	}
 
 	this.erase = function () {
@@ -208,15 +218,18 @@ function Cell(x, y, r, threshold, firePower, ctx) {
 
 	this.eraseInner = function () {
 		// Erase the inside of the cell, leaving the border
-		this.ctx.fillStyle = 'rgb(255,255,255)';
+		this.ctx.fillStyle = '#fff';
 		this.ctx.beginPath();
-		this.ctx.arc(this.x, this.y, this.r-2, 0, 2*Math.PI);
+		this.ctx.arc(this.x, this.y, this.r-1, 0, 2*Math.PI);
 		this.ctx.fill();
 	}
 
 	this.stimulate = function (power) {
 		var oldPotential = this.potential;
 		var newPotential = oldPotential + power;
+		oldPotentialRatio = oldPotential / this.threshold;
+		newPotentialRatio = newPotential / this.threshold;
+		this.drawPotentialWedge(true, oldPotentialRatio, newPotentialRatio);
 		// Recursively stimulate all output cells
 		if (newPotential >= this.threshold) {
 			this.potential = 0;
@@ -228,9 +241,6 @@ function Cell(x, y, r, threshold, firePower, ctx) {
 		} else {
 			this.potential = newPotential;		
 		}
-		oldPotentialRatio = oldPotential / this.threshold;
-		newPotentialRatio = newPotential / this.threshold;
-		this.drawPotentialWedge(true, oldPotentialRatio, newPotentialRatio);
 		printMeshStateTable();
 	}
 }
@@ -252,14 +262,11 @@ function Dendrite(originCell = null, destinationCell, startX, startY, endX, endY
 		// Calculate (if needed) the coordinates for each side of the arrow
 		// Uses global arrowWidth variable
 		// Returns the coordinates in an array of four elements: x1, y1, x2, y2
-		// if (this.arrowCoords == null) {
+		if (this.arrowCoords == null) {
 			if (arrowWidth === 0) {
 				console.log('Unable to calculate arrow coordinates of dendrite #'+this.id+'. (Arrow width cannot be zero.)');
 				return false;
 			}
-			arrowWidth=20;
-			arrowAngle=Math.PI*0.25;
-
 			// If the destination cell is on the right, then the arrow needs to point to the right
 			var x1, y1, x2, y2;
 			if (this.endX > this.startX) {
@@ -273,8 +280,7 @@ function Dendrite(originCell = null, destinationCell, startX, startY, endX, endY
 				x2 = Math.round(this.midpointX + Math.cos(arrowAngle - Math.asin(2*(this.midpointY-this.destinationCell.y)/this.length))*arrowWidth/(2*Math.sin(arrowAngle)));
 				y2 = Math.round(this.midpointY - Math.sin(arrowAngle - Math.asin(2*(this.midpointY-this.destinationCell.y)/this.length))*arrowWidth/(2*Math.sin(arrowAngle)));
 			} else {
-				// This dendrite is vertical
-				// Should it point up or down?
+				// This dendrite is vertical. Should it point up or down?
 				x1 = Math.round(this.midpointX - arrowWidth/2);
 				x2 = Math.round(this.midpointX + arrowWidth/2);
 				// Y values are the same if it's pointing up or down
@@ -286,14 +292,12 @@ function Dendrite(originCell = null, destinationCell, startX, startY, endX, endY
 					y1 = y2 = Math.round(this.midpointY + arrowWidth/(2*Math.tan(arrowAngle)));
 				}
 			}
-			document.getElementById("arrowCoords").innerHTML = '('+x2+', '+y2+'); ('+this.midpointX+', '+this.midpointY+')';
-
 			this.arrowCoords = [x1,y1,x2,y2];
-		// }
+		}
 		return this.arrowCoords;
 	}
 
-	this.draw = function (color, width) {
+	this.draw = function (color, width, redrawCells = true) {
 	    this.ctx.beginPath();
 	    this.ctx.strokeStyle = color;
 	    this.ctx.lineWidth = width;
@@ -308,22 +312,21 @@ function Dendrite(originCell = null, destinationCell, startX, startY, endX, endY
 	    	this.ctx.lineTo(Math.round(this.midpointX), Math.round(this.midpointY));
 	    	this.ctx.lineTo(this.arrowCoords[2], this.arrowCoords[3]);
 	    	this.ctx.fill();
-
-	    	// this.ctx.beginPath();
-	    	// this.ctx.fillStyle = 'blue';	    	
-	    	// this.ctx.arc(this.arrowCoords[2], this.arrowCoords[3],2,0,2*Math.PI);
-	    	// this.ctx.fill();
-	    	// this.ctx.beginPath();
-	    	// this.ctx.fillStyle = 'red';
-	    	// this.ctx.arc(this.midpointX, this.midpointY,2,0,2*Math.PI);
-	    	// this.ctx.fill();
 	    }
+	    if (redrawCells) {
+		    if (this.originCell != null) {
+		    	this.originCell.erase();
+		    	this.originCell.draw();
+		    }
+	    	this.destinationCell.erase();
+	    	this.destinationCell.draw();
+		}
 	}
 }
 
 function workspaceSetup() {
 	// Initial setup of the workspace includes one cell and one dendrite
-	var firstCell = addCell(75, 250, 20, 3, 1, false, ctx);
+	var firstCell = addCell(75, 250, 20, 1, 1, false, ctx);
 	firstCell.drawPotentialWedge(false, null, firstCell.potential / firstCell.threshold);
 	// Create the first dendrite, which is a special case: it doesn't have an origin dendrite
 	// because the first cell is stimulated by clicking the "stimulate" button.
@@ -344,8 +347,12 @@ function workspaceMouseClick(event) {
 				collision.unselect();
 				collision.highlight();
 			} else {
-				// If we're clicking on a different (non-selected) cell, then create a dendrite between the selected cell and this cell
-				addDendrite(Cells[selectedCell], collision, Cells[selectedCell].x, Cells[selectedCell].y, collision.x, collision.y);
+				if (Dendrites.length < dendriteLimit) {
+					// If we're clicking on a different (non-selected) cell, then create a dendrite between the selected cell and this cell
+					addDendrite(Cells[selectedCell], collision, Cells[selectedCell].x, Cells[selectedCell].y, collision.x, collision.y);
+				} else {
+					displayTip('You\'ve added the maximum number of connections.', 5000);
+				}
 				// Unselect (but don't highlight) the selected cell
 				Cells[selectedCell].unselect();
 			}
@@ -354,14 +361,19 @@ function workspaceMouseClick(event) {
 			Cells[selectedCell].unselect();
 		}
 		drawingDendrite = false;
-	} else {		
+	} else {
 		if (collision instanceof Cell) {
 			// Select the cell and enter dendrite-drawing mode
 			collision.select();			
 			drawingDendrite = true;
-		} else if (!collision) {
-			// Add a cell at the current mouse location
-			var newCell = addCell(x, y, 20, 3, 1);
+		} else {
+			// If there's room, add a cell at the current mouse location
+			var newRadius = 20;
+			if (checkForCollision(x,y,newRadius+cellBuffer)) {
+				displayTip("There is not enough room to place a cell here.", 5000);
+			} else {
+				addCell(x, y, newRadius, 3, 1);
+			}
 		}
 	}
 	printMeshStateTable();
@@ -412,11 +424,9 @@ function addCell(newCellX, newCellY, newRadius, newThreshold, newFirePower, init
 
 	// Add the cell to the Cells array and draw it
 	newCell.id = Cells.length;
+	newCell.draw();
 	if (initialHighlight) {
-		newCell.draw(cellColor, false);
 		newCell.highlight();
-	} else {
-		newCell.draw(cellColor, false);
 	}
 	Cells.push(newCell);
 	return newCell;
