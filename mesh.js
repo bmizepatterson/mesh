@@ -70,6 +70,12 @@ function displayTip(text, time = 5000) {
 	setTimeout(function () { document.getElementById("tip").innerHTML = '&nbsp;'; } , time);
 }
 
+function TimerCollection() {
+	this.wedgeAnimation = 0;
+	this.fireAnimation = 0;
+	this.stimulateChildDelay = 0;
+}
+
 // Object constructors
 function Cell(x, y, r, threshold, firePower, ctx) {
 	this.x = x;
@@ -83,7 +89,7 @@ function Cell(x, y, r, threshold, firePower, ctx) {
 	this.highlighted = false;
 	this.selected = false;
 	this.ctx = ctx;				// The drawing context of the HTML canvas
-	this.timers = [];			// An array of any and all animation timers associated with this cell
+	this.TimerCollection = new TimerCollection();	// An array of any and all animation timers associated with this cell
 
 	this.draw = function () {
 		var color = this.selected ? selectColor : cellColor;
@@ -137,11 +143,12 @@ function Cell(x, y, r, threshold, firePower, ctx) {
 								cell.fire(stimulateChildren);
 							}
 							clearInterval(wedgeAnimation);	// End animation
+							cell.TimerCollection.wedgeAnimation = 0;
 							printMeshStateTable();
 						}
 						progress = progress + 10*Math.PI / 180; // Increment by 10-degree intervals (Screw radians!)
 				}, 10);
-			this.timers.push(wedgeAnimation);
+			this.TimerCollection.wedgeAnimation = wedgeAnimation;
 		} else {
 			// Draw without animating
 			this.ctx.beginPath();
@@ -163,17 +170,20 @@ function Cell(x, y, r, threshold, firePower, ctx) {
 		var fn;
 		if (stimulateChildren) {
 			fn = function () {
+				parentCell.TimerCollection.fireAnimation = 0;
 				parentCell.eraseInner(); 
 				parentCell.drawPotentialWedge(true, 0, parentCell.potential / parentCell.threshold);
 				parentCell.stimulateChildren();
 			};
 		} else {
 			fn = function () {
+				parentCell.TimerCollection.fireAnimation = 0;
 				parentCell.eraseInner(); 
 				parentCell.drawPotentialWedge(true, 0, parentCell.potential / parentCell.threshold);
 			};
 		}
-		this.timers.push(window.setTimeout(fn, 250));
+		var fireAnimation = window.setTimeout(fn, 250);
+		this.TimerCollection.fireAnimation = fireAnimation;
 	}
 
 	this.redrawDendrites = function () {
@@ -265,6 +275,11 @@ function Cell(x, y, r, threshold, firePower, ctx) {
 	}
 
 	this.stimulate = function (power) {
+		// If we're in the middle of firing, then ignore stimulation
+		if (this.TimerCollection.fireAnimation) {
+			return;
+		}
+
 		var oldPotential = this.potential;
 		var newPotential = oldPotential + power;
 		oldPotentialRatio = oldPotential / this.threshold;
@@ -284,7 +299,11 @@ function Cell(x, y, r, threshold, firePower, ctx) {
 				// Delay for a time proportional to the length of the dendrite
 				let cell = this.outputDendrites[i].destinationCell;
 				var delay = this.outputDendrites[i].length;
-				this.timers.push(setTimeout(function() { cell.stimulate(power); } , delay));
+				var stimulateChildDelay = setTimeout(function() { 
+						cell.TimerCollection.stimulateChildDelay = 0;
+						cell.stimulate(power);
+					} , delay);
+				this.TimerCollection.stimulateChildDelay = stimulateChildDelay;
 			}
 		}
 	}
@@ -387,11 +406,15 @@ function resetWorkspace() {
 	stopStimulate();
 	// Halt all ongoing wedge animations and reset all cell potentials to zero
 	for (let i = 0; i < Cells.length; i++) {
-		if (Cells[i].timers.length) {
-			let timers = Cells[i].timers.length;
-			for (let j = 0; j < timers; j++) {
-				clearInterval(Cells[i].timers[j]);				
-			}
+		// Clear currently running timers
+		if (Cells[i].TimerCollection.wedgeAnimation) {
+			clearInterval(Cells[i].TimerCollection.wedgeAnimation);
+		}
+		if (Cells[i].TimerCollection.fireAnimation) {
+			clearInterval(Cells[i].TimerCollection.fireAnimation);
+		}
+		if (Cells[i].TimerCollection.stimulateChildDelay) {
+			clearInterval(Cells[i].TimerCollection.stimulateChildDelay);
 		}
 		Cells[i].potential = 0;
 		Cells[i].eraseInner();
