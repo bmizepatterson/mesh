@@ -19,13 +19,26 @@ var dendriteColor = '#777';
 var wedgeColor = 'rgb(50,50,50)';
 
 // Utility functions
-function load() {
-	// Start with a white background
-	ctx.fillStyle = '#fff';
-	ctx.fillRect(0,0,500,500);
-	workspaceSetup();
-	setInterval(watch, 100);
-}
+
+// Start with a white background
+ctx.fillStyle = '#fff';
+ctx.fillRect(0,0,500,500);
+workspaceSetup();
+setInterval(watch, 100);
+
+// Add event listeners
+document.getElementById("workspace").addEventListener("click", workspaceMouseClick);
+document.getElementById("workspace").addEventListener("mousemove", workspaceMove);
+document.getElementById("workspace").addEventListener("mouseout", workspaceMoveOut);
+document.getElementById("startStimulate").addEventListener("click", clickStimulateButton);
+document.getElementById("stopStimulate").addEventListener("click", stopStimulate);
+document.getElementById("stepStimulate").addEventListener("click", function() { Cells[0].stimulate(1); });
+document.getElementById("clearWorkspace").addEventListener("click", clearWorkspace);
+document.getElementById("thresholdSetting").addEventListener("change", updateThresholdValue);
+document.getElementById("thresholdSetting").addEventListener("move", updateThresholdValue);
+document.getElementById("firepowerSetting").addEventListener("change", updateFirepowerValue);
+document.getElementById("firepowerSetting").addEventListener("move", updateFirepowerValue);
+
 
 function distance(x1, y1, x2, y2) {
 	// Use the distance formula to calculate the distance between two points.
