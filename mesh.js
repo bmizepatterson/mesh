@@ -33,6 +33,7 @@ document.getElementById("workspace").addEventListener("mouseout", workspaceMoveO
 document.getElementById("startStimulate").addEventListener("click", clickStimulateButton);
 document.getElementById("stopStimulate").addEventListener("click", stopStimulate);
 document.getElementById("stepStimulate").addEventListener("click", function() { Cells[0].stimulate(1); });
+document.getElementById("resetWorkspace").addEventListener("click", resetWorkspace);
 document.getElementById("clearWorkspace").addEventListener("click", clearWorkspace);
 document.getElementById("thresholdSetting").addEventListener("change", updateThresholdValue);
 document.getElementById("thresholdSetting").addEventListener("move", updateThresholdValue);
@@ -82,6 +83,7 @@ function Cell(x, y, r, threshold, firePower, ctx) {
 	this.highlighted = false;
 	this.selected = false;
 	this.ctx = ctx;				// The drawing context of the HTML canvas
+	this.timers = [];			// An array of any and all animation timers associated with this cell
 
 	this.draw = function () {
 		var color = this.selected ? selectColor : cellColor;
@@ -139,6 +141,7 @@ function Cell(x, y, r, threshold, firePower, ctx) {
 						}
 						progress = progress + 10*Math.PI / 180; // Increment by 10-degree intervals (Screw radians!)
 				}, 10);
+			this.timers.push(wedgeAnimation);
 		} else {
 			// Draw without animating
 			this.ctx.beginPath();
@@ -170,7 +173,7 @@ function Cell(x, y, r, threshold, firePower, ctx) {
 				parentCell.drawPotentialWedge(true, 0, parentCell.potential / parentCell.threshold);
 			};
 		}
-		window.setTimeout(fn, 250);
+		this.timers.push(window.setTimeout(fn, 250));
 	}
 
 	this.redrawDendrites = function () {
@@ -281,7 +284,7 @@ function Cell(x, y, r, threshold, firePower, ctx) {
 				// Delay for a time proportional to the length of the dendrite
 				let cell = this.outputDendrites[i].destinationCell;
 				var delay = this.outputDendrites[i].length;
-				setTimeout(function() { cell.stimulate(power); } , delay);
+				this.timers.push(setTimeout(function() { cell.stimulate(power); } , delay));
 			}
 		}
 	}
@@ -367,6 +370,8 @@ function Dendrite(originCell = null, destinationCell, startX, startY, endX, endY
 }
 
 function clearWorkspace() {
+	// Stop all stimulation if necessary
+	resetWorkspace();
 	// Clear out arrays
 	Cells = [];
 	Dendrites = [];
@@ -375,6 +380,23 @@ function clearWorkspace() {
 	ctx.fillStyle = '#fff';
 	ctx.fillRect(0,0,500,500);
 	workspaceSetup();
+}
+
+function resetWorkspace() {
+	// Stop all stimulation if necessary
+	stopStimulate();
+	// Halt all ongoing wedge animations and reset all cell potentials to zero
+	for (let i = 0; i < Cells.length; i++) {
+		if (Cells[i].timers.length) {
+			let timers = Cells[i].timers.length;
+			for (let j = 0; j < timers; j++) {
+				clearInterval(Cells[i].timers[j]);				
+			}
+		}
+		Cells[i].potential = 0;
+		Cells[i].eraseInner();
+	}
+	printMeshStateTable();
 }
 
 function workspaceSetup() {
@@ -522,8 +544,6 @@ function addCell(newCellX, newCellY, newRadius, newThreshold, newFirePower, init
 	}
 	return newCell;
 }
-
-
  
 function printMeshStateTable() {
 	// Print nothing if no cells are present in the mesh
