@@ -5,7 +5,6 @@ var Dendrites = [];
 var drawingDendrite = false;
 var dendriteLimit = 10;
 var ctx = document.getElementById("workspace").getContext("2d");
-var debug = document.getElementById("debugspace");
 var highlightedCell = -1;
 var selectedCell = -1;
 var arrowWidth = 16;
@@ -359,8 +358,6 @@ function clearWorkspace() {
 	// Erase workspace
 	ctx.fillStyle = '#fff';
 	ctx.fillRect(0,0,500,500);
-	// Clear debug area
-	debug.innerHTML = '';
 	workspaceSetup();
 }
 
@@ -513,16 +510,26 @@ function addCell(newCellX, newCellY, newRadius, newThreshold, newFirePower, init
  
 function printMeshStateTable() {
 	// Print nothing if no cells are present in the mesh
-	if (Cells.length === 0) {
+	if (!Cells.length) {
 		return;
 	}
-
-	var html = '';
-	// Setup table columns
-	html += '<table class="w3-table-all w3-tiny"><tr><th>Cell</th><th>Coord.</th><th>Potential</th><th>Threshold</th><th>Power</th><th>Inputs</th><th>Outputs</th></tr>';
-	for (var i = 0; i < Cells.length; i++) {
-		html += '<tr id="cellRow'+i+'""><td>' + Cells[i].id + '</td><td>(' + Cells[i].x + ', ' + Cells[i].y + ')</td><td>' + Cells[i].potential + '</td><td>' + Cells[i].threshold + '</td><td>' + Cells[i].firePower + '</td><td>' + Cells[i].inputDendrites.length + '</td><td>' + Cells[i].outputDendrites.length + '</td></tr>';
+	// Delete the old, stale rows in the table body
+	var tbody = document.getElementById("cellInfoTable").getElementsByTagName('tbody')[0];
+	var rowCount = tbody.rows.length;	// Copy this so it doesn't change as you loop through and delete the rows one at a time
+	for (var j = 0; j < rowCount; j++) {
+		// Careful. Must pass 0 for each loop, because as one row is deleted, the others move up.
+		tbody.deleteRow(0);
 	}
-	html += '</table>';
-	debug.innerHTML = html;
+
+	for (var i = 0; i < Cells.length; i++) {
+		var row = tbody.insertRow(i);
+		row.id = "cellRow"+i;
+		row.insertCell(0).innerHTML = Cells[i].id;
+		row.insertCell(1).innerHTML = "("+Cells[i].x+", "+Cells[i].y+")";
+		row.insertCell(2).innerHTML = Cells[i].potential;
+		row.insertCell(3).innerHTML = Cells[i].threshold;
+		row.insertCell(4).innerHTML = Cells[i].firePower;
+		row.insertCell(5).innerHTML = Cells[i].inputDendrites.length;
+		row.insertCell(6).innerHTML = Cells[i].outputDendrites.length;
+	}
 }

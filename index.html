@@ -12,7 +12,7 @@
 		#cellInfo {
 			margin:0;
 		}
-		#debugspace {
+		#cellInfoTable {
 			margin-top:20px;
 		}
 		#watchlist p {
@@ -27,7 +27,7 @@
 	<div class="w3-container">
 		<h1 style="margin-bottom:0;">Mesh</h1>
 		<p class="w3-text-gray w3-small" style="margin-top:0px;"><em>A graphical neural network simulator</em></p>
-		<p>Click anywhere in the box to add a cell body. Click on a cell to select it. Then click on another cell to connect them. Click "Start" to provide input to the first cell and see how it propogates through the network!</p>
+		<p>Click anywhere in the box to add a cell body. Click on a cell to select it. Then click on another cell to connect the two. Click "Start" to provide input to the first cell and see how it propogates through the network!</p>
 		
 		<div class="w3-row">		
 			
@@ -61,14 +61,21 @@
 				<table class="w3-table w3-border w3-small" style="margin-top:20px;">
 					<tr><th colspan="3"><p>Settings for new cells:</p></th></tr>
 					<tr><td><label for="thresholdSetting">Threshold:</label></td>
-						<td><input type="range" id="thresholdSetting" name="thresholdSetting" min="1" max="9" value="5" onchange="updateThresholdValue()" onmousemove="updateThresholdValue()" style="width:100%;"></td>
-				 		<td style="text-align:center;"><span id="thresholdValue">5</span></td></tr>
+						<td><input type="range" id="thresholdSetting" name="thresholdSetting" min="1" max="9" value="3" onchange="updateThresholdValue()" onmousemove="updateThresholdValue()" style="width:100%;"></td>
+				 		<td style="text-align:center;"><span id="thresholdValue">3</span></td></tr>
 				 	<tr><td><label for="firepowerSetting">Power:</label></td>
 				 		<td><input type="range" id="firepowerSetting" name="firepowerSetting" min="1" max="9" value="1" onchange="updateFirepowerValue()" onmousemove="updateFirepowerValue()" style="width:100%;"></td>
 				 		<td style="text-align:center;"><span id="firepowerValue">1</span></td></tr>
 				 </table>	
 
-				<div id="debugspace" style="overflow-y:auto;"></div>
+				<div id="cellInfoTable" style="overflow-y:auto;">
+					<table class="w3-table-all w3-tiny">
+						<thead>
+							<tr><th>Cell</th><th>Coordinates</th><th>Potential</th><th>Threshold</th><th>Power</th><th>Inputs</th><th>Outputs</th></tr>
+						</thead>
+						<tbody></tbody>
+					</table>
+				</div>
 
 			</div>
 		</div>
