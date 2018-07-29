@@ -262,8 +262,12 @@ function Cell(x, y, r, threshold, firePower, ctx) {
 
 	this.stimulateChildren = function () {
 		if (this.outputDendrites.length > 0) {
+			var power = this.firePower;
 			for (var i = 0; i < this.outputDendrites.length; i++) {
-				this.outputDendrites[i].destinationCell.stimulate(this.firePower);
+				// Delay for a time proportional to the length of the dendrite
+				var cell = this.outputDendrites[i].destinationCell;
+				var delay = this.outputDendrites[i].length;
+				setTimeout(function() { cell.stimulate(power); } , delay);
 			}
 		}
 	}
@@ -405,7 +409,7 @@ function workspaceMouseClick(event) {
 		} else {
 			// If there's room, add a cell at the current mouse location
 			var newRadius = 20;
-			if (checkForCollision(x,y,newRadius+cellBuffer)) {
+			if (x > 500-newRadius-highlightWidth-highlightOffset || y > 500-newRadius-highlightWidth-highlightOffset || checkForCollision(x,y,newRadius+cellBuffer)) {
 				displayTip("There is not enough room to place a cell here.", 5000);
 			} else {
 				var threshold = document.getElementById("thresholdSetting").value;
