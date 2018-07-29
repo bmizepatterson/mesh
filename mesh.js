@@ -107,13 +107,14 @@ function Cell(x, y, r, threshold, firePower, ctx) {
 		if (animate && oldPotentialRatio == null) {
 			console.log('oldPotentialRatio must be passed to Cell::drawPotentialWedge() if animating.');
 		}
-		this.ctx.fillStyle = this.selected ? '#fff' : wedgeColor;;
+		var fillStyle = this.selected ? '#fff' : wedgeColor;
 		var target = 1.5*Math.PI + (newPotentialRatio*2*Math.PI); // 1.5*PI starts us at the top of the circle. Dang radians.
 		if (animate == true) {
 			var start = 1.5*Math.PI + (oldPotentialRatio*2*Math.PI);
 			// Instantly draw the old wedge, if any
 			if (oldPotentialRatio > 0) {
 				this.ctx.beginPath();
+				this.ctx.fillStyle = fillStyle;
 				this.ctx.moveTo(this.x, this.y);
 				this.ctx.arc(this.x, this.y, this.r*0.75, 1.5*Math.PI, start);
 				this.ctx.fill();
@@ -124,6 +125,7 @@ function Cell(x, y, r, threshold, firePower, ctx) {
 			var wedgeAnimation = window.setInterval(function() {
 						if (progress < target) {
 							cell.ctx.beginPath();
+							cell.ctx.fillStyle = fillStyle;
 							cell.ctx.moveTo(cell.x, cell.y);
 							cell.ctx.arc(cell.x, cell.y, cell.r*0.75, start, progress);
 							cell.ctx.fill();
@@ -140,6 +142,7 @@ function Cell(x, y, r, threshold, firePower, ctx) {
 		} else {
 			// Draw without animating
 			this.ctx.beginPath();
+			this.ctx.fillStyle = fillStyle;
 			this.ctx.moveTo(this.x, this.y);
 			this.ctx.arc(this.x, this.y, this.r*0.75, 1.5*Math.PI, target);
 			this.ctx.fill();
