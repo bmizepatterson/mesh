@@ -144,7 +144,9 @@ function Cell(x, y, r, threshold, firePower, ctx) {
 							}
 							clearInterval(wedgeAnimation);	// End animation
 							cell.TimerCollection.wedgeAnimation = 0;
-							printMeshStateTable();
+							// Take a snapshot of the cell and update the cell info table
+							var cellSnapshot = cell;
+							printMeshStateTable(cellSnapshot);
 						}
 						progress = progress + 10*Math.PI / 180; // Increment by 10-degree intervals (Screw radians!)
 				}, 10);
@@ -284,8 +286,10 @@ function Cell(x, y, r, threshold, firePower, ctx) {
 		var newPotential = oldPotential + power;
 		oldPotentialRatio = oldPotential / this.threshold;
 		newPotentialRatio = newPotential / this.threshold;
-		this.potential = newPotential;		
-		printMeshStateTable();
+		this.potential = newPotential;
+		// Take a snapshot of the cell and update the cell table with it
+		var cellSnapshot = this;	
+		printMeshStateTable(cellSnapshot);
 		if (newPotential >= this.threshold) {
 			this.potential = 0;			
 		}
@@ -561,38 +565,65 @@ function addCell(newCellX, newCellY, newRadius, newThreshold, newFirePower, init
 	newCell.id = Cells.length;
 	newCell.draw();
 	Cells.push(newCell);
-	printMeshStateTable();
+	printMeshStateTable(newCell);
 	if (initialHighlight) {
 		newCell.highlight();
 	}
 	return newCell;
 }
  
-function printMeshStateTable() {
+function printMeshStateTable(cell = null) {
 	// Print nothing if no cells are present in the mesh
 	if (!Cells.length) {
 		return;
 	}
-	// Delete the old, stale rows in the table body
 	var tbody = document.getElementById("cellInfoTable").getElementsByTagName('tbody')[0];
-	var rowCount = tbody.rows.length;	// Copy this so it doesn't change as you loop through and delete the rows one at a time
-	for (var j = 0; j < rowCount; j++) {
-		// Careful. Must pass 0 for each loop, because as one row is deleted, the others move up.
-		tbody.deleteRow(0);
-	}
+	if (cell !== null) {
+		// If the row exists, then update it; otherwise add it
+		if (tbody.rows.length > cell.id) {
+			// Find the row for this cell and update it
+			var cellRow = tbody.rows[cell.id];
+			cellRow.cells[0].innerHTML = cell.id;
+			cellRow.cells[1].innerHTML = "("+cell.x+", "+cell.y+")";
+			cellRow.cells[2].innerHTML = cell.potential;
+			cellRow.cells[3].innerHTML = cell.threshold;
+			cellRow.cells[4].innerHTML = cell.firePower;
+			cellRow.cells[5].innerHTML = cell.inputDendrites.length;
+			cellRow.cells[6].innerHTML = cell.outputDendrites.length;
+		} else {
+			var row = tbody.insertRow(cell.id);
+			row.id = "cellRow"+cell.id;
+			row.addEventListener("mouseover", function() { cell.highlight(); });
+			row.addEventListener("mouseout", function() { cell.unhighlight(); });
+			row.insertCell(0).innerHTML = cell.id+1;
+			row.insertCell(1).innerHTML = "("+cell.x+", "+cell.y+")";
+			row.insertCell(2).innerHTML = cell.potential;
+			row.insertCell(3).innerHTML = cell.threshold;
+			row.insertCell(4).innerHTML = cell.firePower;
+			row.insertCell(5).innerHTML = cell.inputDendrites.length;
+			row.insertCell(6).innerHTML = cell.outputDendrites.length;
+		}
+	} else {
+		// Reprint the entire table. Delete the old, stale rows in the table body
+		var rowCount = tbody.rows.length;	// Copy this so it doesn't change as you loop through and delete the rows one at a time
+		for (var j = 0; j < rowCount; j++) {
+			// Careful. Must pass 0 for each loop, because as one row is deleted, the others move up.
+			tbody.deleteRow(0);
+		}
 
-	for (let i = 0; i < Cells.length; i++) {
-		var row = tbody.insertRow(i);
-		row.id = "cellRow"+i;
-		let cell = Cells[i];
-		row.addEventListener("mouseover", function() { cell.highlight(); });
-		row.addEventListener("mouseout", function() { cell.unhighlight(); });
-		row.insertCell(0).innerHTML = Cells[i].id+1;
-		row.insertCell(1).innerHTML = "("+Cells[i].x+", "+Cells[i].y+")";
-		row.insertCell(2).innerHTML = Cells[i].potential;
-		row.insertCell(3).innerHTML = Cells[i].threshold;
-		row.insertCell(4).innerHTML = Cells[i].firePower;
-		row.insertCell(5).innerHTML = Cells[i].inputDendrites.length;
-		row.insertCell(6).innerHTML = Cells[i].outputDendrites.length;
+		for (let i = 0; i < Cells.length; i++) {
+			var row = tbody.insertRow(i);
+			row.id = "cellRow"+i;
+			let cell = Cells[i];
+			row.addEventListener("mouseover", function() { cell.highlight(); });
+			row.addEventListener("mouseout", function() { cell.unhighlight(); });
+			row.insertCell(0).innerHTML = Cells[i].id+1;
+			row.insertCell(1).innerHTML = "("+Cells[i].x+", "+Cells[i].y+")";
+			row.insertCell(2).innerHTML = Cells[i].potential;
+			row.insertCell(3).innerHTML = Cells[i].threshold;
+			row.insertCell(4).innerHTML = Cells[i].firePower;
+			row.insertCell(5).innerHTML = Cells[i].inputDendrites.length;
+			row.insertCell(6).innerHTML = Cells[i].outputDendrites.length;
+		}
 	}
 }
