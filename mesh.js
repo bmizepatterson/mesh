@@ -376,18 +376,38 @@ function Dendrite(originCell = null, destinationCell, startX, startY, endX, endY
 	    this.ctx.beginPath();
 	    this.ctx.strokeStyle = color;
 	    this.ctx.lineWidth = width;
-		this.ctx.moveTo(this.startX, this.startY);
-	    this.ctx.lineTo(this.endX, this.endY);
-	    this.ctx.stroke();
-	    // Draw arrow
-	    if (this.getArrowCoords()) {
-	    	this.ctx.beginPath();
-	    	this.ctx.fillStyle = color;
-	    	this.ctx.moveTo(this.arrowCoords[0], this.arrowCoords[1]);
-	    	this.ctx.lineTo(Math.round(this.midpointX), Math.round(this.midpointY));
-	    	this.ctx.lineTo(this.arrowCoords[2], this.arrowCoords[3]);
-	    	this.ctx.fill();
-	    }
+		// If this dendrite creates a feedback loop with another cell, then curve the dendrite lines
+		var loop = false;
+		// Iterate through the origin cell's input dendrites come from the current destination cell
+		if (this.originCell != null) {
+			for (let i = 0; i < this.originCell.inputDendrites.length; i++) {
+				if (this.originCell.inputDendrites[i].originCell != null && this.originCell.inputDendrites[i].originCell.id === this.destinationCell.id) {
+					loop = true;
+					break;
+				}
+			}
+		}
+			
+		if (loop) {
+			// TO DO
+			document.getElementById("loopDetected").innerHTML = 'Loop detected between cell ' + this.originCell.id + ' and cell ' + this.destinationCell.id;
+			// Draw this dendrite
+			// Redraw the previous
+		} else {
+			this.ctx.moveTo(this.startX, this.startY);
+		    this.ctx.lineTo(this.endX, this.endY);
+		    this.ctx.stroke();
+		    // Draw arrow
+		    if (this.getArrowCoords()) {
+		    	this.ctx.beginPath();
+		    	this.ctx.fillStyle = color;
+		    	this.ctx.moveTo(this.arrowCoords[0], this.arrowCoords[1]);
+		    	this.ctx.lineTo(Math.round(this.midpointX), Math.round(this.midpointY));
+		    	this.ctx.lineTo(this.arrowCoords[2], this.arrowCoords[3]);
+		    	this.ctx.fill();
+		    }
+		}
+
 	    if (redrawCells) {
 		    if (this.originCell != null) {
 		    	this.originCell.erase();
