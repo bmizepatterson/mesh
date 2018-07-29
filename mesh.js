@@ -200,6 +200,7 @@ function Cell(x, y, r, threshold, firePower, ctx) {
 		this.ctx.lineWidth = highlightWidth+2;
 		this.ctx.arc(this.x, this.y, this.r+highlightOffset, 0, 2*Math.PI);
 		this.ctx.stroke();
+		this.redrawDendrites();
 		// Unhighlight this row on the cell table
 		var row = document.getElementById("cellRow"+this.id);
 		for (var i = 0; i < row.children.length; i++) {
@@ -429,7 +430,6 @@ function workspaceMove(event) {
 		if (highlightedCell > -1) {
 			cell = Cells[highlightedCell];
 			cell.unhighlight();
-			cell.redrawDendrites();
 		}
 	} else {
 		// Draw a circle around the collision
@@ -507,6 +507,8 @@ function addCell(newCellX, newCellY, newRadius, newThreshold, newFirePower, init
 	}
 	return newCell;
 }
+
+
  
 function printMeshStateTable() {
 	// Print nothing if no cells are present in the mesh
@@ -521,9 +523,12 @@ function printMeshStateTable() {
 		tbody.deleteRow(0);
 	}
 
-	for (var i = 0; i < Cells.length; i++) {
+	for (let i = 0; i < Cells.length; i++) {
 		var row = tbody.insertRow(i);
 		row.id = "cellRow"+i;
+		let cell = Cells[i];
+		row.addEventListener("mouseover", function() { cell.highlight(); });
+		row.addEventListener("mouseout", function() { cell.unhighlight(); });
 		row.insertCell(0).innerHTML = Cells[i].id;
 		row.insertCell(1).innerHTML = "("+Cells[i].x+", "+Cells[i].y+")";
 		row.insertCell(2).innerHTML = Cells[i].potential;
