@@ -529,7 +529,7 @@ function printMeshStateTable() {
 		let cell = Cells[i];
 		row.addEventListener("mouseover", function() { cell.highlight(); });
 		row.addEventListener("mouseout", function() { cell.unhighlight(); });
-		row.insertCell(0).innerHTML = Cells[i].id;
+		row.insertCell(0).innerHTML = Cells[i].id+1;
 		row.insertCell(1).innerHTML = "("+Cells[i].x+", "+Cells[i].y+")";
 		row.insertCell(2).innerHTML = Cells[i].potential;
 		row.insertCell(3).innerHTML = Cells[i].threshold;
