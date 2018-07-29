@@ -247,6 +247,7 @@ function Cell(x, y, r, threshold, firePower, ctx) {
 		// Set selected flags
 		selectedCell = this.id;
 		this.selected = true;
+		drawingDendrite = true;
 		// Indicate selection by filling the circle
 		this.erase();
 		this.redrawDendrites();
@@ -258,6 +259,7 @@ function Cell(x, y, r, threshold, firePower, ctx) {
 		// Set selected flags
 		selectedCell = -1;
 		this.selected = false;
+		drawingDendrite = false;
 		// Redraw the circle
 		this.erase();
 		this.redrawDendrites();
@@ -398,7 +400,6 @@ function Dendrite(originCell = null, destinationCell, startX, startY, endX, endY
 }
 
 function clearWorkspace() {
-	// Stop all stimulation if necessary
 	resetWorkspace();
 	// Clear out arrays
 	Cells = [];
@@ -413,6 +414,7 @@ function clearWorkspace() {
 function resetWorkspace() {
 	// Stop all stimulation if necessary
 	stopStimulate();
+
 	// Halt all ongoing wedge animations and reset all cell potentials to zero
 	for (let i = 0; i < Cells.length; i++) {
 		// Clear currently running timers
@@ -426,9 +428,15 @@ function resetWorkspace() {
 			clearInterval(Cells[i].TimerCollection.stimulateChildDelay);
 		}
 		Cells[i].potential = 0;
-		Cells[i].eraseInner();
+		if (Cells[i].selected) {
+			Cells[i].unselect();
+		} else {
+			Cells[i].eraseInner();			
+		}
 	}
 	fireCount = 0;
+	selectedCell = -1;
+	highlightedCell = -1;
 	printMeshStateTable();
 	printStatisticsTable();
 }
@@ -470,12 +478,10 @@ function workspaceMouseClick(event) {
 			// Deselect the selected cell
 			Cells[selectedCell].unselect();
 		}
-		drawingDendrite = false;
 	} else {
 		if (collision instanceof Cell) {
 			// Select the cell and enter dendrite-drawing mode
 			collision.select();			
-			drawingDendrite = true;
 		} else {
 			// If there's room, add a cell at the current mouse location
 			var newRadius = 20;
