@@ -18,6 +18,9 @@ var highlightColor = '#3f51b5';
 var dendriteColor = '#777';
 var wedgeColor = 'rgb(50,50,50)';
 
+// Mesh statistics
+var fireCount = 0;
+
 // Utility functions
 
 // Start with a white background
@@ -186,6 +189,8 @@ function Cell(x, y, r, threshold, firePower, ctx) {
 		}
 		var fireAnimation = window.setTimeout(fn, 250);
 		this.TimerCollection.fireAnimation = fireAnimation;
+		fireCount++;
+		printStatisticsTable();
 	}
 
 	this.redrawDendrites = function () {
@@ -423,7 +428,9 @@ function resetWorkspace() {
 		Cells[i].potential = 0;
 		Cells[i].eraseInner();
 	}
+	fireCount = 0;
 	printMeshStateTable();
+	printStatisticsTable();
 }
 
 function workspaceSetup() {
@@ -434,6 +441,7 @@ function workspaceSetup() {
 	// because the first cell is stimulated by clicking the "stimulate" button.
 	addDendrite(null, firstCell, 0, firstCell.y, firstCell.x-firstCell.r, firstCell.y);
 	printMeshStateTable();
+	printStatisticsTable();
 }
 
 function workspaceMouseClick(event) {
@@ -550,6 +558,7 @@ function addDendrite(originCell = null, destinationCell, startX, startY, endX, e
 	destinationCell.inputDendrites.push(newDen);
 	newDen.draw(dendriteColor, 1);
 	printMeshStateTable();
+	printStatisticsTable();
 }
 
 function addCell(newCellX, newCellY, newRadius, newThreshold, newFirePower, initialHighlight = true) {
@@ -566,6 +575,7 @@ function addCell(newCellX, newCellY, newRadius, newThreshold, newFirePower, init
 	newCell.draw();
 	Cells.push(newCell);
 	printMeshStateTable(newCell);
+	printStatisticsTable();
 	if (initialHighlight) {
 		newCell.highlight();
 	}
@@ -626,4 +636,10 @@ function printMeshStateTable(cell = null) {
 			row.insertCell(6).innerHTML = Cells[i].outputDendrites.length;
 		}
 	}
+}
+
+function printStatisticsTable() {
+	document.getElementById("totalCells").innerHTML = Cells.length;
+	document.getElementById("totalDendrites").innerHTML = Dendrites.length;
+	document.getElementById("totalFires").innerHTML = fireCount;
 }

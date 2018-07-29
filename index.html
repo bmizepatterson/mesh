@@ -56,19 +56,31 @@
 			</div>
 		</div>
 
-		<div class="w3-rest w3-container">	
+		<div class="w3-rest">
 
-			<table class="w3-table w3-border w3-small" style="margin-top:20px;">
-				<tr><th colspan="3"><p>Settings for new cells:</p></th></tr>
-				<tr><td><label for="thresholdSetting">Threshold:</label></td>
-					<td><input type="range" id="thresholdSetting" name="thresholdSetting" min="1" max="9" value="3" style="width:100%;"></td>
-			 		<td style="text-align:center;"><span id="thresholdValue">3</span></td></tr>
-			 	<tr><td><label for="firepowerSetting">Power:</label></td>
-			 		<td><input type="range" id="firepowerSetting" name="firepowerSetting" min="1" max="9" value="1" style="width:100%;"></td>
-			 		<td style="text-align:center;"><span id="firepowerValue">1</span></td></tr>
-			 </table>	
+			<div class="w3-row">	
+				<div class="w3-small w3-container w3-col l7" style="margin-top:20px;">
+					<table class="w3-table w3-border">
+						<tr><th colspan="3"><p>Settings for new cells:</p></th></tr>
+						<tr><td><label for="thresholdSetting">Threshold:</label></td>
+							<td><input type="range" id="thresholdSetting" name="thresholdSetting" min="1" max="9" value="3" style="width:100%;"></td>
+					 		<td style="text-align:center;"><span id="thresholdValue">3</span></td></tr>
+					 	<tr><td><label for="firepowerSetting">Power:</label></td>
+					 		<td><input type="range" id="firepowerSetting" name="firepowerSetting" min="1" max="9" value="1" style="width:100%;"></td>
+					 		<td style="text-align:center;"><span id="firepowerValue">1</span></td></tr>
+					</table>
+				</div>
 
-			<div id="cellInfoTable" style="overflow-y:auto;">
+				 <div class="w3-small w3-container w3-col l5" style="margin-top:20px;">
+					<table class="w3-table w3-border">
+					 	<tr><td>Total Cells:</td><td id="totalCells"></td></tr>
+					 	<tr><td>Total Connections:</td><td id="totalDendrites"></td></tr>
+					 	<tr><td>Total Cell Fires:</td><td id="totalFires"></td></tr>
+					</table>
+				</div>
+			</div>
+
+			<div id="cellInfoTable" class="w3-container" style="overflow-y:auto;">
 				<table class="w3-table-all w3-tiny w3-centered">
 					<thead>
 						<tr><th>Cell</th><th>Coordinates</th><th>Potential</th><th>Threshold</th><th>Power</th><th>Inputs</th><th>Outputs</th></tr>
