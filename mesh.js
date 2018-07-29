@@ -440,6 +440,16 @@ function workspaceMove(event) {
 	}
 }
 
+function workspaceMoveOut(event) {
+	document.getElementById("mousecoords").innerHTML = "";
+	// Make sure no cells are highlighted
+	if (highlightedCell > -1) {
+		cell = Cells[highlightedCell];
+		cell.unhighlight();
+		cell.redrawDendrites();
+	}
+}
+
 function clickStimulateButton() {
 	document.getElementById("stopStimulate").style.display = "block";
 	document.getElementById("startStimulate").style.display = "none";
@@ -515,8 +525,4 @@ function printMeshStateTable() {
 	}
 	html += '</table>';
 	debug.innerHTML = html;
-}
-
-function clearCoor() {
-    document.getElementById("mousecoords").innerHTML = "";
 }
