@@ -77,8 +77,6 @@ function Cell(x, y, r, threshold, firePower, ctx) {
 	this.threshold = threshold;	// Input needed before the cell will fire
 	this.potential = 0;			// Input that has been collected so far
 	this.firePower = firePower;	// Output released when the cell fires
-	// this.inputCells = [];		// Array of cells that provide input to this cell
-	// this.outputCells = [];		// Array of cells to which this cell provides input
 	this.inputDendrites = [];	// Array of dendrites that connect input cells to this cell
 	this.outputDendrites = [];  // Array of dendrites that connect this cell to its output cells
 	this.highlighted = false;
@@ -160,13 +158,13 @@ function Cell(x, y, r, threshold, firePower, ctx) {
 		if (stimulateChildren) {
 			fn = function () {
 				parentCell.eraseInner(); 
-				parentCell.drawPotentialWedge(true, 0, parentCell.potential/parentCell.threshold);
+				parentCell.drawPotentialWedge(true, 0, parentCell.potential / parentCell.threshold);
 				parentCell.stimulateChildren();
 			};
 		} else {
 			fn = function () {
 				parentCell.eraseInner(); 
-				parentCell.drawPotentialWedge(true, 0, parentCell.potential/parentCell.threshold);
+				parentCell.drawPotentialWedge(true, 0, parentCell.potential / parentCell.threshold);
 			};
 		}
 		window.setTimeout(fn, 250);
@@ -200,7 +198,7 @@ function Cell(x, y, r, threshold, firePower, ctx) {
 			row.children[i].style.backgroundColor = "#ffffcc";
 		}
 		// Display the cell info below the canvas
-		document.getElementById("cellInfo").innerHTML = "Current Potential: "+this.potential+"; Threshold: "+this.threshold+"; Power: "+this.firePower;
+		document.getElementById("cellInfo").innerHTML = "Current Potential: " + this.potential + "; Threshold: " + this.threshold + "; Power: "+this.firePower;
 	}
 
 	this.unhighlight = function () {
@@ -276,9 +274,9 @@ function Cell(x, y, r, threshold, firePower, ctx) {
 	this.stimulateChildren = function () {
 		if (this.outputDendrites.length > 0) {
 			var power = this.firePower;
-			for (var i = 0; i < this.outputDendrites.length; i++) {
+			for (let i = 0; i < this.outputDendrites.length; i++) {
 				// Delay for a time proportional to the length of the dendrite
-				var cell = this.outputDendrites[i].destinationCell;
+				let cell = this.outputDendrites[i].destinationCell;
 				var delay = this.outputDendrites[i].length;
 				setTimeout(function() { cell.stimulate(power); } , delay);
 			}
@@ -370,6 +368,7 @@ function clearWorkspace() {
 	Cells = [];
 	Dendrites = [];
 	// Erase workspace
+	ctx.clearRect(0,0,500,500);
 	ctx.fillStyle = '#fff';
 	ctx.fillRect(0,0,500,500);
 	workspaceSetup();
@@ -423,8 +422,8 @@ function workspaceMouseClick(event) {
 			if (x > 500-newRadius-highlightWidth-highlightOffset || y > 500-newRadius-highlightWidth-highlightOffset || checkForCollision(x,y,newRadius+cellBuffer)) {
 				displayTip("There is not enough room to place a cell here.", 5000);
 			} else {
-				var threshold = document.getElementById("thresholdSetting").value;
-				var firepower = document.getElementById("firepowerSetting").value;
+				var threshold = parseInt(document.getElementById("thresholdSetting").value);
+				var firepower = parseInt(document.getElementById("firepowerSetting").value);
 				addCell(x, y, newRadius, threshold, firepower);
 			}
 		}
