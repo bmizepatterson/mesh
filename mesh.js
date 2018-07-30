@@ -75,6 +75,7 @@ function Cell(x, y, r, threshold, firePower) {
 	this.TimerCollection = new TimerCollection();	// An array of any and all animation timers associated with this cell
 	this.firing = false;		// Whether the cell is currently firing.
 	this.refactoryPeriod = 250;
+	this.currentWedgeAngle = -Math.PI/2;
 
 	this.draw = function() {
 		var lineColor = this.selected ? selectColor : cellColor;
@@ -88,6 +89,7 @@ function Cell(x, y, r, threshold, firePower) {
 		ctx.lineWidth = 1;
 		ctx.stroke();
 		ctx.closePath();
+
 		if (this.highlighted) {
 			ctx.beginPath();
 			ctx.strokeStyle = highlightColor;
@@ -96,25 +98,33 @@ function Cell(x, y, r, threshold, firePower) {
 			ctx.stroke();
 			ctx.closePath();
 		}
-		// Draw the wedge
-		if (this.potential > 0 && this.potential < this.threshold) {
-			var wedgeAngle = (1.5 * Math.PI) + (this.potential / this.threshold * 2 * Math.PI);	// 1.5*PI starts us at the top of the circle. Dang radians.
-			ctx.beginPath();
-			ctx.fillStyle = this.selected ? backgroundColor : wedgeColor;
-			ctx.moveTo(this.x, this.y);
-			ctx.arc(this.x, this.y, this.r * 0.75, 1.5 * Math.PI, wedgeAngle);
-			ctx.fill();
-			ctx.closePath();
 
-			// this.drawPotentialWedge(false, 0, this.potential / this.threshold);
-		}
 		if (this.firing) {
 			ctx.beginPath();
 			ctx.fillStyle = '#ffc107';
 			ctx.arc(this.x, this.y, this.r * 0.75, 0, 2 * Math.PI);
 			ctx.fill();
 			ctx.closePath();
+		} else if (this.potential > 0) {
+			var targetAngle = this.potential / this.threshold * 2 * Math.PI - Math.PI/2;	// -PI/2 starts us at the top of the circle. Dang radians.
+
+			ctx.beginPath();
+			ctx.fillStyle = this.selected ? backgroundColor : wedgeColor;
+			ctx.moveTo(this.x, this.y);
+			ctx.arc(this.x, this.y, this.r * 0.75, -Math.PI/2, this.currentWedgeAngle);
+			ctx.fill();
+			ctx.closePath();
+			
+			if (this.currentWedgeAngle < targetAngle) {
+				this.currentWedgeAngle = this.currentWedgeAngle + (10 * Math.PI / 180); // Increment by 10-degree intervals (Screw radians!)
+			} else if (this.potential === this.threshold) {
+				this.fire();
+			}
 		}
+	}
+
+	this.drawWedge = function() {
+		
 	}
 
 	this.drawPotentialWedge = function (animate, oldPotentialRatio = null, newPotentialRatio, stimulateChildren = false) {	
@@ -642,11 +652,12 @@ function draw() {
 	// Draw all cells
 	for (let c = 0; c < Cells.length; c++) {
 		Cells[c].draw();
-		if (Cells[c].potential === Cells[c].threshold) {
-			Cells[c].fire();
-		} else {
-			Cells[c].drawWedge;
-		}
+			Cells[c].drawWedge();
+		
+		// if (Cells[c].potential === Cells[c].threshold && Cells[c].currentWedgeAngle === -Math.PI/2) {
+		// 	Cells[c].fire();
+		// } else {
+		// }
 	}
 
 }
