@@ -2,9 +2,16 @@
 <html>
 <head>
 	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
+	<link rel="icon" type="image/png" sizes="96x96" href="favicon-96x96.png">
+	<link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
 	<link rel="stylesheet" type="text/css" href="https://www.w3schools.com/w3css/4/w3.css">
 	<link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
 	<style>
+		h1 {
+			margin-bottom:0;
+			line-height: initial;
+		}
 		.w3-table.compact td {
 			padding-top:4px;
 			padding-bottom:4px;
@@ -30,7 +37,8 @@
 <body>
 	
 	<div class="w3-container">
-		<h1 style="margin-bottom:0;">Mesh</h1>
+		<img class="w3-left" src="favicon-32x32.png" height="32" width="32" style="margin-top:12px;margin-right:4px;">
+		<h1>Mesh</h1>
 		<p class="w3-text-gray w3-small" style="margin-top:0px;"><em>A graphical neural network simulator</em></p>
 		<p>Click anywhere in the box to add a cell body. Click on a cell to select it. Then click on another cell to connect the two. Click "Start" or "Step" to provide input to the first cell and see how it propogates through the network!</p>
 	</div>	
@@ -52,7 +60,7 @@
 				
 			<p id="cellInfo" class="w3-small w3-right-align w3-text-gray" style="height:20px;">&nbsp;</p>
 
-			<div id="watchlist" class="w3-tiny w3-border w3-container" style="margin-bottom:20px;">
+			<div id="watchlist" class="w3-tiny w3-border w3-container" style="margin-bottom:20px;display:none;">
 				<p>Mouse: <span id="mousecoords"></span></p>
 				<p>drawingDendrite = <span id="drawingDendrite"></span></p>
 				<p>selectedCell = <span id="selectedCell"></span></p>
