@@ -7,7 +7,7 @@ var dendriteLimit = 20;
 var ctx = document.getElementById("workspace").getContext("2d");
 var highlightedCell = -1;
 var selectedCell = -1;
-var arrowWidth = 16;
+var arrowWidth = 10;
 var arrowAngle = Math.PI*0.15 // Must be in radians
 var highlightWidth = 3;
 var highlightOffset = 4;
@@ -378,16 +378,18 @@ function Dendrite(originCell = null, destinationCell, startX, startY, endX, endY
 		// Calculate (if needed) the coordinates for the control point needed for drawing this dendrite curve
 		// Uses global curveWidth variable
 		// Returns the coordinates in an array [x, y];
-		var x, y;
-		if (this.startY < this.endY) {
-			x = Math.round(this.midpointX + (curveWidth * Math.sin(Math.PI/2 - Math.asin(2*(this.startX-this.midpointX)/this.length))));
-			y = Math.round(this.midpointY + (curveWidth * Math.cos(Math.PI/2 - Math.asin(2*(this.startX-this.midpointX)/this.length))));
-		} else {
-			x = Math.round(this.midpointX - (curveWidth * Math.sin(Math.PI/2 - Math.asin(2*(this.startX-this.midpointX)/this.length))));
-			y = Math.round(this.midpointY + (curveWidth * Math.cos(Math.PI/2 - Math.asin(2*(this.startX-this.midpointX)/this.length))));
+		if (this.controlPoint == null) {
+			var x, y;
+			if (this.startY < this.endY) {
+				x = Math.round(this.midpointX + (curveWidth * Math.sin(Math.PI/2 - Math.asin(2*(this.startX-this.midpointX)/this.length))));
+				y = Math.round(this.midpointY + (curveWidth * Math.cos(Math.PI/2 - Math.asin(2*(this.startX-this.midpointX)/this.length))));
+			} else {
+				x = Math.round(this.midpointX - (curveWidth * Math.sin(Math.PI/2 - Math.asin(2*(this.startX-this.midpointX)/this.length))));
+				y = Math.round(this.midpointY + (curveWidth * Math.cos(Math.PI/2 - Math.asin(2*(this.startX-this.midpointX)/this.length))));
+			}
+			document.getElementById("controlPoint").innerHTML = '(' + x + ', ' + y + ')';
+			this.controlPoint = [x, y];
 		}
-		document.getElementById("controlPoint").innerHTML = '(' + x + ', ' + y + ')';
-		this.controlPoint = [x, y];
 		return this.controlPoint;
 	}
 
@@ -421,24 +423,24 @@ function Dendrite(originCell = null, destinationCell, startX, startY, endX, endY
 			this.ctx.moveTo(this.startX, this.startY);
 			this.ctx.quadraticCurveTo(this.controlPoint[0], this.controlPoint[1], this.endX, this.endY);
 			this.ctx.stroke();
-
-			this.ctx.beginPath();
-			this.ctx.fillStyle = 'red';
-			this.ctx.arc(this.controlPoint[0], this.controlPoint[1], 2, 0, Math.PI * 2);
-			this.ctx.fill();
+			// this.ctx.beginPath();
+			// this.ctx.fillStyle = 'red';
+			// this.ctx.arc(this.controlPoint[0], this.controlPoint[1], 2, 0, Math.PI * 2);
+			// this.ctx.fill();
 		} else {
 			this.ctx.moveTo(this.startX, this.startY);
 		    this.ctx.lineTo(this.endX, this.endY);
 		    this.ctx.stroke();
-		    // Draw arrow
+			// Draw arrow
 		    if (this.getArrowCoords()) {
 		    	this.ctx.beginPath();
-		    	this.ctx.fillStyle = color;
+		    	this.ctx.strokeStyle = color;
 		    	this.ctx.moveTo(this.arrowCoords[0], this.arrowCoords[1]);
 		    	this.ctx.lineTo(Math.round(this.midpointX), Math.round(this.midpointY));
 		    	this.ctx.lineTo(this.arrowCoords[2], this.arrowCoords[3]);
-		    	this.ctx.fill();
+		    	this.ctx.stroke();
 		    }
+
 		}
 	    if (redrawCells) {
 		    if (this.originCell != null) {
