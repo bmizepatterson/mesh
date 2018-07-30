@@ -1,35 +1,50 @@
 // Global variables
+var stimulationInProgress = false;	// False or the timer ID of the stimulation in progress
 var Cells = [];
 var Dendrites = [];
 var Pulses = [];
 var drawingDendrite = false;
 var dendriteLimit = 20;
 var ctx = document.getElementById("workspace").getContext("2d");
-var debug = document.getElementById("debugspace");
 var highlightedCell = -1;
 var selectedCell = -1;
-var textAlign = 'center';
-var font = '12px sans-serif';
-var textFill = '#000';
-var arrowWidth = 16;
+var arrowWidth = 10;
 var arrowAngle = Math.PI*0.15 // Must be in radians
 var highlightWidth = 3;
 var highlightOffset = 5;
-var cellBuffer = 30;
+var interCellBuffer = 30;
 var selectColor = '#3f51b5';
 var cellColor = '#000';
 var highlightColor = '#3f51b5';
 var dendriteColor = '#777';
 var wedgeColor = 'rgb(50,50,50)';
+var curveWidth = 30;
+
+// Mesh statistics
+var fireCount = 0;
 
 // Utility functions
-function load() {
-	// Start with a white background
-	ctx.fillStyle = '#fff';
-	ctx.fillRect(0,0,500,500);
-	workspaceSetup();
-	setInterval(watch, 100);
-}
+
+// Start with a white background
+ctx.fillStyle = '#fff';
+ctx.fillRect(0,0,500,500);
+workspaceSetup();
+setInterval(watch, 100);
+
+// Add event listeners
+document.getElementById("workspace").addEventListener("click", workspaceMouseClick);
+document.getElementById("workspace").addEventListener("mousemove", workspaceMove);
+document.getElementById("workspace").addEventListener("mouseout", workspaceMoveOut);
+document.getElementById("startStimulate").addEventListener("click", clickStimulateButton);
+document.getElementById("stopStimulate").addEventListener("click", stopStimulate);
+document.getElementById("stepStimulate").addEventListener("click", function() { Cells[0].stimulate(1); });
+document.getElementById("resetWorkspace").addEventListener("click", resetWorkspace);
+document.getElementById("clearWorkspace").addEventListener("click", clearWorkspace);
+document.getElementById("thresholdSetting").addEventListener("change", updateThresholdValue);
+document.getElementById("thresholdSetting").addEventListener("mousemove", updateThresholdValue);
+document.getElementById("firepowerSetting").addEventListener("change", updateFirepowerValue);
+document.getElementById("firepowerSetting").addEventListener("mousemove", updateFirepowerValue);
+
 
 function distance(x1, y1, x2, y2) {
 	// Use the distance formula to calculate the distance between two points.
@@ -40,6 +55,7 @@ function watch() {
 	document.getElementById("drawingDendrite").innerHTML = drawingDendrite;
 	document.getElementById("highlightedCell").innerHTML = highlightedCell;
 	document.getElementById("selectedCell").innerHTML = selectedCell;
+	document.getElementById("stimulateCheck").innerHTML = stimulationInProgress;
 }
 
 function checkForCollision(x,y,radius = 0) {
@@ -59,6 +75,12 @@ function displayTip(text, time = 5000) {
 	setTimeout(function () { document.getElementById("tip").innerHTML = '&nbsp;'; } , time);
 }
 
+function TimerCollection() {
+	this.wedgeAnimation = 0;
+	this.fireAnimation = 0;
+	this.stimulateChildDelay = 0;
+}
+
 // Object constructors
 function Cell(x, y, r, threshold, firePower, ctx) {
 	this.x = x;
@@ -67,13 +89,13 @@ function Cell(x, y, r, threshold, firePower, ctx) {
 	this.threshold = threshold;	// Input needed before the cell will fire
 	this.potential = 0;			// Input that has been collected so far
 	this.firePower = firePower;	// Output released when the cell fires
-	// this.inputCells = [];		// Array of cells that provide input to this cell
-	// this.outputCells = [];		// Array of cells to which this cell provides input
 	this.inputDendrites = [];	// Array of dendrites that connect input cells to this cell
 	this.outputDendrites = [];  // Array of dendrites that connect this cell to its output cells
 	this.highlighted = false;
 	this.selected = false;
 	this.ctx = ctx;				// The drawing context of the HTML canvas
+	this.TimerCollection = new TimerCollection();	// An array of any and all animation timers associated with this cell
+	this.firing = false;		// Whether the cell is currently firing.
 
 	this.draw = function () {
 		var color = this.selected ? selectColor : cellColor;
@@ -99,13 +121,14 @@ function Cell(x, y, r, threshold, firePower, ctx) {
 		if (animate && oldPotentialRatio == null) {
 			console.log('oldPotentialRatio must be passed to Cell::drawPotentialWedge() if animating.');
 		}
-		this.ctx.fillStyle = this.selected ? '#fff' : wedgeColor;;
+		var fillStyle = this.selected ? '#fff' : wedgeColor;
 		var target = 1.5*Math.PI + (newPotentialRatio*2*Math.PI); // 1.5*PI starts us at the top of the circle. Dang radians.
 		if (animate == true) {
 			var start = 1.5*Math.PI + (oldPotentialRatio*2*Math.PI);
 			// Instantly draw the old wedge, if any
 			if (oldPotentialRatio > 0) {
 				this.ctx.beginPath();
+				this.ctx.fillStyle = fillStyle;
 				this.ctx.moveTo(this.x, this.y);
 				this.ctx.arc(this.x, this.y, this.r*0.75, 1.5*Math.PI, start);
 				this.ctx.fill();
@@ -114,8 +137,11 @@ function Cell(x, y, r, threshold, firePower, ctx) {
 			var progress = start;
 			var cell = this;	// In the context of setInterval, 'this' refers to the window object, so copy the current this
 			var wedgeAnimation = window.setInterval(function() {
-						if (progress < target) {
+						// Update target in case the cell has been stimulated since this animation began
+						var newTarget = cell.potential / cell.threshold;
+						if (progress < Target) {
 							cell.ctx.beginPath();
+							cell.ctx.fillStyle = fillStyle;
 							cell.ctx.moveTo(cell.x, cell.y);
 							cell.ctx.arc(cell.x, cell.y, cell.r*0.75, start, progress);
 							cell.ctx.fill();
@@ -125,51 +151,79 @@ function Cell(x, y, r, threshold, firePower, ctx) {
 								cell.fire(stimulateChildren);
 							}
 							clearInterval(wedgeAnimation);	// End animation
+							cell.TimerCollection.wedgeAnimation = 0;
+							// Take a snapshot of the cell and update the cell info table
+							var cellSnapshot = cell;
+							printMeshStateTable(cellSnapshot);
 						}
-						progress = progress + 3*Math.PI / 180; // Increment by 3-degree intervals (Screw radians!)
+						progress = progress + 10*Math.PI / 180; // Increment by 10-degree intervals (Screw radians!)
 				}, 10);
+			this.TimerCollection.wedgeAnimation = wedgeAnimation;
 		} else {
 			// Draw without animating
 			this.ctx.beginPath();
+			this.ctx.fillStyle = fillStyle;
 			this.ctx.moveTo(this.x, this.y);
 			this.ctx.arc(this.x, this.y, this.r*0.75, 1.5*Math.PI, target);
 			this.ctx.fill();
+			if (newPotentialRatio >= 1) {
+				this.fire(stimulateChildren);
+			}
+			var cellSnapshot = cell;
+			printMeshStateTable(cellSnapshot);
 		}		
 	}
 
 	this.fire = function (stimulateChildren) {
 		// Complete the wedge-circle, stimulate children, and reset after a sec
-		this.ctx.fillStyle = 'rgb(255,0,0)';
+		this.firing = true;
+		if (this.selected) {
+			// Redraw the background cell
+			this.erase();
+			this.ctx.fillStyle = selectColor;
+			this.ctx.beginPath();
+			this.ctx.arc(this.x,this.y,this.r,0,2*Math.PI);
+			this.ctx.fill();			
+		}
+		// Now draw the yellow 'blink' that indicates the cell is firing
+		this.ctx.fillStyle = '#ffc107';
 		this.ctx.beginPath();
 		this.ctx.moveTo(this.x, this.y);
 		this.ctx.arc(this.x, this.y, this.r*0.8, 0, 2*Math.PI);
 		this.ctx.fill();
+
+		fireCount++;
 		var parentCell = this;
+		printStatisticsTable(parentCell);
 		var fn;
 		if (stimulateChildren) {
 			fn = function () {
-				parentCell.eraseInner(); 
-				parentCell.drawPotentialWedge(true, 0, parentCell.potential/parentCell.threshold);
+				parentCell.firing = false;
+				parentCell.TimerCollection.fireAnimation = 0;
+				parentCell.erase();
+				parentCell.draw(); 
 				parentCell.stimulateChildren();
 			};
 		} else {
 			fn = function () {
-				parentCell.eraseInner(); 
-				parentCell.drawPotentialWedge(true, 0, parentCell.potential/parentCell.threshold);
+				parentCell.firing = false;
+				parentCell.TimerCollection.fireAnimation = 0;
+				parentCell.erase(); 
+				parentCell.draw(); 
 			};
 		}
-		window.setTimeout(fn, 250);
+		this.TimerCollection.fireAnimation = window.setTimeout(fn, 250);
 	}
 
 	this.redrawDendrites = function () {
 		// First erase them, then draw them again
 		for (var i = 0; i < this.inputDendrites.length; i++) {
 			this.inputDendrites[i].draw('#fff', 3);
-			this.inputDendrites[i].draw(dendriteColor, 1);
+			this.inputDendrites[i].draw(dendriteColor, 0.5);
 		}
 		for (var i = 0; i < this.outputDendrites.length; i++) {
 			this.outputDendrites[i].draw('#fff', 3);
-			this.outputDendrites[i].draw(dendriteColor, 1);
+			this.outputDendrites[i].draw(dendriteColor, 0.5);
 		}
 	}
 
@@ -183,6 +237,13 @@ function Cell(x, y, r, threshold, firePower, ctx) {
 		this.ctx.lineWidth = highlightWidth;
 		this.ctx.arc(this.x, this.y, this.r+highlightOffset, 0, 2*Math.PI);
 		this.ctx.stroke();
+		// Highlight this row on the cell table
+		var row = document.getElementById("cellRow"+this.id);
+		for (var i = 0; i < row.children.length; i++) {
+			row.children[i].style.backgroundColor = "#ffffcc";
+		}
+		// Display the cell info below the canvas
+		document.getElementById("cellInfo").innerHTML = "Current Potential: " + this.potential + "; Threshold: " + this.threshold + "; Power: "+this.firePower;
 	}
 
 	this.unhighlight = function () {
@@ -195,12 +256,20 @@ function Cell(x, y, r, threshold, firePower, ctx) {
 		this.ctx.lineWidth = highlightWidth+2;
 		this.ctx.arc(this.x, this.y, this.r+highlightOffset, 0, 2*Math.PI);
 		this.ctx.stroke();
+		this.redrawDendrites();
+		// Unhighlight this row on the cell table
+		var row = document.getElementById("cellRow"+this.id);
+		for (var i = 0; i < row.children.length; i++) {
+			row.children[i].style.backgroundColor = "initial";
+		}
+		document.getElementById("cellInfo").innerHTML = "";
 	}
 
 	this.select = function () {
 		// Set selected flags
 		selectedCell = this.id;
 		this.selected = true;
+		drawingDendrite = true;
 		// Indicate selection by filling the circle
 		this.erase();
 		this.redrawDendrites();
@@ -212,6 +281,7 @@ function Cell(x, y, r, threshold, firePower, ctx) {
 		// Set selected flags
 		selectedCell = -1;
 		this.selected = false;
+		drawingDendrite = false;
 		// Redraw the circle
 		this.erase();
 		this.redrawDendrites();
@@ -236,24 +306,38 @@ function Cell(x, y, r, threshold, firePower, ctx) {
 	}
 
 	this.stimulate = function (power) {
+		// If we're in the middle of firing, then ignore stimulation
+		if (this.firing) {
+			document.getElementById("tip").innerHTML = 'Cannot stimulate cell ' + this.id + ': Currently firing.';
+			return;
+		}
+
 		var oldPotential = this.potential;
 		var newPotential = oldPotential + power;
 		oldPotentialRatio = oldPotential / this.threshold;
 		newPotentialRatio = newPotential / this.threshold;
-		this.drawPotentialWedge(true, oldPotentialRatio, newPotentialRatio, true);
-		// Recursively stimulate all output cells
+		this.potential = newPotential;
+		// Take a snapshot of the cell and update the cell table with it
+		var cellSnapshot = this;	
+		printMeshStateTable(cellSnapshot);
 		if (newPotential >= this.threshold) {
 			this.potential = 0;			
-		} else {
-			this.potential = newPotential;		
 		}
-		printMeshStateTable();
+		this.drawPotentialWedge(false, oldPotentialRatio, newPotentialRatio, true);
 	}
 
 	this.stimulateChildren = function () {
 		if (this.outputDendrites.length > 0) {
-			for (var i = 0; i < this.outputDendrites.length; i++) {
-				this.outputDendrites[i].destinationCell.stimulate(this.firePower);
+			var power = this.firePower;
+			for (let i = 0; i < this.outputDendrites.length; i++) {
+				// Delay for a time proportional to the length of the dendrite
+				let cell = this.outputDendrites[i].destinationCell;
+				var delay = this.outputDendrites[i].length;
+				var stimulateChildDelay = setTimeout(function() { 
+						cell.TimerCollection.stimulateChildDelay = 0;
+						cell.stimulate(power);
+					} , delay);
+				this.TimerCollection.stimulateChildDelay = stimulateChildDelay;
 			}
 		}
 	}
@@ -271,6 +355,7 @@ function Dendrite(originCell = null, destinationCell, startX, startY, endX, endY
 	this.midpointY = (startY + endY) / 2;
 	this.ctx = ctx;
 	this.arrowCoords = null;
+	this.controlPoint = null;
 
 	this.getArrowCoords = function() {
 		// Calculate (if needed) the coordinates for each side of the arrow
@@ -311,22 +396,74 @@ function Dendrite(originCell = null, destinationCell, startX, startY, endX, endY
 		return this.arrowCoords;
 	}
 
-	this.draw = function (color, width, redrawCells = true) {
+	this.getControlPoint = function() {
+		// Calculate (if needed) the coordinates for the control point needed for drawing this dendrite curve
+		// Uses global curveWidth variable
+		// Returns the coordinates in an array [x, y];
+		if (this.controlPoint == null) {
+			var x, y;
+			if (this.startY < this.endY) {
+				x = Math.round(this.midpointX + (curveWidth * Math.sin(Math.PI/2 - Math.asin(2*(this.startX-this.midpointX)/this.length))));
+				y = Math.round(this.midpointY + (curveWidth * Math.cos(Math.PI/2 - Math.asin(2*(this.startX-this.midpointX)/this.length))));
+			} else {
+				x = Math.round(this.midpointX - (curveWidth * Math.sin(Math.PI/2 - Math.asin(2*(this.startX-this.midpointX)/this.length))));
+				y = Math.round(this.midpointY + (curveWidth * Math.cos(Math.PI/2 - Math.asin(2*(this.startX-this.midpointX)/this.length))));
+			}
+			document.getElementById("controlPoint").innerHTML = '(' + x + ', ' + y + ')';
+			this.controlPoint = [x, y];
+		}
+		return this.controlPoint;
+	}
+
+	this.draw = function (color, width, redrawCells = true, ignoreLoop = false) {
 	    this.ctx.beginPath();
 	    this.ctx.strokeStyle = color;
 	    this.ctx.lineWidth = width;
-		this.ctx.moveTo(this.startX, this.startY);
-	    this.ctx.lineTo(this.endX, this.endY);
-	    this.ctx.stroke();
-	    // Draw arrow
-	    if (this.getArrowCoords()) {
-	    	this.ctx.beginPath();
-	    	this.ctx.fillStyle = color;
-	    	this.ctx.moveTo(this.arrowCoords[0], this.arrowCoords[1]);
-	    	this.ctx.lineTo(Math.round(this.midpointX), Math.round(this.midpointY));
-	    	this.ctx.lineTo(this.arrowCoords[2], this.arrowCoords[3]);
-	    	this.ctx.fill();
-	    }
+		// If this dendrite creates a feedback loop with another cell, then curve the dendrite lines
+		var loop = false;
+		// Iterate through the origin cell's input dendrites come from the current destination cell
+		if (this.originCell != null) {
+			for (let i = 0; i < this.originCell.inputDendrites.length; i++) {
+				if (this.originCell.inputDendrites[i].originCell == null) {
+					continue;
+				}
+				if (this.originCell.inputDendrites[i].originCell.id === this.destinationCell.id) {
+					loop = true;
+					break;
+				}
+			}
+		}
+			
+		if (loop && !ignoreLoop && this.getControlPoint()) {
+			document.getElementById("loopDetected").innerHTML = 'Loop detected between cell ' + this.originCell.id + ' and cell ' + this.destinationCell.id;
+			// Draw this dendrite
+			// Erase previous dendrite lines
+			this.draw('#fff', 0.5, false, true);
+			this.ctx.beginPath();
+			this.ctx.strokeStyle = color;
+			this.ctx.lineWidth = width;
+			this.ctx.moveTo(this.startX, this.startY);
+			this.ctx.quadraticCurveTo(this.controlPoint[0], this.controlPoint[1], this.endX, this.endY);
+			this.ctx.stroke();
+			// this.ctx.beginPath();
+			// this.ctx.fillStyle = 'red';
+			// this.ctx.arc(this.controlPoint[0], this.controlPoint[1], 2, 0, Math.PI * 2);
+			// this.ctx.fill();
+		} else {
+			this.ctx.moveTo(this.startX, this.startY);
+		    this.ctx.lineTo(this.endX, this.endY);
+		    this.ctx.stroke();
+			// Draw arrow
+		    if (this.getArrowCoords()) {
+		    	this.ctx.beginPath();
+		    	this.ctx.strokeStyle = color;
+		    	this.ctx.moveTo(this.arrowCoords[0], this.arrowCoords[1]);
+		    	this.ctx.lineTo(Math.round(this.midpointX), Math.round(this.midpointY));
+		    	this.ctx.lineTo(this.arrowCoords[2], this.arrowCoords[3]);
+		    	this.ctx.stroke();
+		    }
+
+		}
 	    if (redrawCells) {
 		    if (this.originCell != null) {
 		    	this.originCell.erase();
@@ -338,55 +475,48 @@ function Dendrite(originCell = null, destinationCell, startX, startY, endX, endY
 	}
 }
 
-function Pulse(x, y, r, dx, dy, ctx) {
-	this.x = x;
-	this.y = y;
-	this.dx = dx;
-	this.dy = dy;
-	this.r = r;
-	this.color = 'rgb(255,0,0)';
-	this.ctx = ctx;
-
-	this.draw = function() {
-      this.ctx.beginPath();
-      this.ctx.arc(this.x, this.y, this.radius, 0, Math.PI*2, false);
-      this.ctx.strokeStyle = 'black';
-      this.ctx.fillStyle = this.color;
-      this.ctx.fill();
-      this.ctx.stroke();
-    }
-
-	//reverse the x or y coordinates when the circle touches the side
-    this.update = function() {
-		if (this.x + this.radius > 500 || this.x - this.radius < 0) {
-			this.dx = -this.dx;
-		}
-		if (this.y + this.radius > 500 || this.y - this.radius < 0) {
-			this.dy = -this.dy;
-		}
-		this.x += this.dx;
-		this.y += this.dy;
-		this.draw();
-	}
-
-	this.animate = function() {
-		this.ctx.clearRect(this.x-this.r,this.y-this.r,2*this.r,2*this.r);
-		for (let i = 0; i < Pulses.length; i++){
-		    Pulses[i].update();
-		}
-	}
-}
-
 function clearWorkspace() {
+	resetWorkspace();
 	// Clear out arrays
 	Cells = [];
 	Dendrites = [];
 	// Erase workspace
+	ctx.clearRect(0,0,500,500);
 	ctx.fillStyle = '#fff';
 	ctx.fillRect(0,0,500,500);
-	// Clear debug area
-	debug.innerHTML = '';
 	workspaceSetup();
+}
+
+function resetWorkspace() {
+	// Stop all stimulation if necessary
+	stopStimulate();
+
+	// Halt all ongoing wedge animations and reset all cell potentials to zero
+	for (let i = 0; i < Cells.length; i++) {
+		// Clear currently running timers
+		if (Cells[i].TimerCollection.wedgeAnimation) {
+			clearInterval(Cells[i].TimerCollection.wedgeAnimation);
+		}
+		if (Cells[i].TimerCollection.fireAnimation) {
+			clearInterval(Cells[i].TimerCollection.fireAnimation);
+		}
+		if (Cells[i].TimerCollection.stimulateChildDelay) {
+			clearInterval(Cells[i].TimerCollection.stimulateChildDelay);
+		}
+		Cells[i].potential = 0;
+		Cells[i].firing = false;
+		if (Cells[i].selected) {
+			Cells[i].unselect();
+		} else {
+			Cells[i].eraseInner();			
+		}
+	}
+	fireCount = 0;
+	selectedCell = -1;
+	highlightedCell = -1;
+	document.getElementById("tip").innerHTML = '';
+	printMeshStateTable();
+	printStatisticsTable();
 }
 
 function workspaceSetup() {
@@ -397,11 +527,7 @@ function workspaceSetup() {
 	// because the first cell is stimulated by clicking the "stimulate" button.
 	addDendrite(null, firstCell, 0, firstCell.y, firstCell.x-firstCell.r, firstCell.y);
 	printMeshStateTable();
-
-	var testPulse = new Pulse(100, 100, 30, 5, 5, ctx);
-	Pulses.push(testPulse);
-	requestAnimationFrame(testPulse.animate);
-
+	printStatisticsTable();
 }
 
 function workspaceMouseClick(event) {
@@ -430,23 +556,27 @@ function workspaceMouseClick(event) {
 			// Deselect the selected cell
 			Cells[selectedCell].unselect();
 		}
-		drawingDendrite = false;
 	} else {
 		if (collision instanceof Cell) {
 			// Select the cell and enter dendrite-drawing mode
 			collision.select();			
-			drawingDendrite = true;
 		} else {
 			// If there's room, add a cell at the current mouse location
 			var newRadius = 20;
-			if (checkForCollision(x,y,newRadius+cellBuffer)) {
+			var canvasBufferMinimum = newRadius+highlightWidth+highlightOffset;
+			var canvasBufferMaximum = 500-newRadius-highlightWidth-highlightOffset;
+
+			if (x > canvasBufferMaximum || x < canvasBufferMinimum
+				|| y > canvasBufferMaximum || y < canvasBufferMinimum
+				|| checkForCollision(x,y,newRadius+interCellBuffer)) {
 				displayTip("There is not enough room to place a cell here.", 5000);
 			} else {
-				addCell(x, y, newRadius, 3, 1);
+				var threshold = parseInt(document.getElementById("thresholdSetting").value);
+				var firepower = parseInt(document.getElementById("firepowerSetting").value);
+				addCell(x, y, newRadius, threshold, firepower);
 			}
 		}
 	}
-	printMeshStateTable();
 }
 
 function workspaceMove(event) {
@@ -461,12 +591,47 @@ function workspaceMove(event) {
 		if (highlightedCell > -1) {
 			cell = Cells[highlightedCell];
 			cell.unhighlight();
-			cell.redrawDendrites();
 		}
 	} else {
 		// Draw a circle around the collision
 		collision.highlight();
 	}
+}
+
+function workspaceMoveOut(event) {
+	document.getElementById("mousecoords").innerHTML = "";
+	// Make sure no cells are highlighted
+	if (highlightedCell > -1) {
+		cell = Cells[highlightedCell];
+		cell.unhighlight();
+		cell.redrawDendrites();
+	}
+}
+
+function clickStimulateButton() {
+	document.getElementById("stopStimulate").style.display = "block";
+	document.getElementById("startStimulate").style.display = "none";
+	document.getElementById("stepStimulate").disabled = true;
+	Cells[0].stimulate(1);
+	stimulationInProgress = setInterval(function() { Cells[0].stimulate(1); }, 1000);
+}
+
+function stopStimulate() {
+	if (stimulationInProgress) {
+		clearInterval(stimulationInProgress);
+		stimulationInProgress = false;
+		document.getElementById("stopStimulate").style.display = "none";
+		document.getElementById("startStimulate").style.display = "block";
+		document.getElementById("stepStimulate").disabled = false;
+	}
+}
+
+function updateThresholdValue() {
+	document.getElementById("thresholdValue").innerHTML = document.getElementById("thresholdSetting").value;
+}
+
+function updateFirepowerValue() {
+	document.getElementById("firepowerValue").innerHTML = document.getElementById("firepowerSetting").value;
 }
 
 function addDendrite(originCell = null, destinationCell, startX, startY, endX, endY) {
@@ -480,7 +645,9 @@ function addDendrite(originCell = null, destinationCell, startX, startY, endX, e
 		originCell.outputDendrites.push(newDen);
 	}
 	destinationCell.inputDendrites.push(newDen);
-	newDen.draw(dendriteColor, 1);
+	newDen.draw(dendriteColor, 0.5);
+	printMeshStateTable();
+	printStatisticsTable();
 }
 
 function addCell(newCellX, newCellY, newRadius, newThreshold, newFirePower, initialHighlight = true) {
@@ -495,31 +662,73 @@ function addCell(newCellX, newCellY, newRadius, newThreshold, newFirePower, init
 	// Add the cell to the Cells array and draw it
 	newCell.id = Cells.length;
 	newCell.draw();
+	Cells.push(newCell);
+	printMeshStateTable(newCell);
+	printStatisticsTable();
 	if (initialHighlight) {
 		newCell.highlight();
 	}
-	Cells.push(newCell);
 	return newCell;
 }
-
-// DEBUG FUNCTIONS
-
-function printMeshStateTable() {
-	// Print nothing if not cells are present in the mesh
-	if (Cells.length === 0) {
+ 
+function printMeshStateTable(cell = null) {
+	// Print nothing if no cells are present in the mesh
+	if (!Cells.length) {
 		return;
 	}
+	var tbody = document.getElementById("cellInfoTable").getElementsByTagName('tbody')[0];
+	if (cell !== null) {
+		// If the row exists, then update it; otherwise add it
+		if (tbody.rows.length > cell.id) {
+			// Find the row for this cell and update it
+			var cellRow = tbody.rows[cell.id];
+			cellRow.cells[0].innerHTML = cell.id+1;
+			cellRow.cells[1].innerHTML = "("+cell.x+", "+cell.y+")";
+			cellRow.cells[2].innerHTML = cell.potential;
+			cellRow.cells[3].innerHTML = cell.threshold;
+			cellRow.cells[4].innerHTML = cell.firePower;
+			cellRow.cells[5].innerHTML = cell.inputDendrites.length;
+			cellRow.cells[6].innerHTML = cell.outputDendrites.length;
+		} else {
+			var row = tbody.insertRow(cell.id);
+			row.id = "cellRow"+cell.id;
+			row.addEventListener("mouseover", function() { cell.highlight(); });
+			row.addEventListener("mouseout", function() { cell.unhighlight(); });
+			row.insertCell(0).innerHTML = cell.id+1;
+			row.insertCell(1).innerHTML = "("+cell.x+", "+cell.y+")";
+			row.insertCell(2).innerHTML = cell.potential;
+			row.insertCell(3).innerHTML = cell.threshold;
+			row.insertCell(4).innerHTML = cell.firePower;
+			row.insertCell(5).innerHTML = cell.inputDendrites.length;
+			row.insertCell(6).innerHTML = cell.outputDendrites.length;
+		}
+	} else {
+		// Reprint the entire table. Delete the old, stale rows in the table body
+		var rowCount = tbody.rows.length;	// Copy this so it doesn't change as you loop through and delete the rows one at a time
+		for (var j = 0; j < rowCount; j++) {
+			// Careful. Must pass 0 for each loop, because as one row is deleted, the others move up.
+			tbody.deleteRow(0);
+		}
 
-	var html = '';
-	// Setup table columns
-	html += '<table class="w3-table-all w3-small"><tr><th>Cell ID</th><th>Coordinates</th><th>Potential</th><th>Threshold</th><th>Fire Power</th><th>Input Dendrites</th><th>Output Dendrites</th></tr>';
-	for (var i = 0; i < Cells.length; i++) {
-		html += '<tr><td>' + Cells[i].id + '</td><td>(' + Cells[i].x + ', ' + Cells[i].y + ')</td><td>' + Cells[i].potential + '</td><td>' + Cells[i].threshold + '</td><td>' + Cells[i].firePower + '</td><td>' + Cells[i].inputDendrites.length + '</td><td>' + Cells[i].outputDendrites.length + '</td></tr>';
+		for (let i = 0; i < Cells.length; i++) {
+			var row = tbody.insertRow(i);
+			row.id = "cellRow"+i;
+			let cell = Cells[i];
+			row.addEventListener("mouseover", function() { cell.highlight(); });
+			row.addEventListener("mouseout", function() { cell.unhighlight(); });
+			row.insertCell(0).innerHTML = Cells[i].id+1;
+			row.insertCell(1).innerHTML = "("+Cells[i].x+", "+Cells[i].y+")";
+			row.insertCell(2).innerHTML = Cells[i].potential;
+			row.insertCell(3).innerHTML = Cells[i].threshold;
+			row.insertCell(4).innerHTML = Cells[i].firePower;
+			row.insertCell(5).innerHTML = Cells[i].inputDendrites.length;
+			row.insertCell(6).innerHTML = Cells[i].outputDendrites.length;
+		}
 	}
-	html += '</table>';
-	debug.innerHTML = html;
 }
 
-function clearCoor() {
-    document.getElementById("mousecoords").innerHTML = "";
+function printStatisticsTable() {
+	document.getElementById("totalCells").innerHTML = Cells.length;
+	document.getElementById("totalDendrites").innerHTML = Dendrites.length;
+	document.getElementById("totalFires").innerHTML = fireCount;
 }
