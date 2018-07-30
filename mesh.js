@@ -154,7 +154,7 @@ function Cell(x, y, r, threshold, firePower) {
 							cell.TimerCollection.wedgeAnimation = 0;
 							// Take a snapshot of the cell and update the cell info table
 							var cellSnapshot = cell;
-							printMeshStateTable(cellSnapshot);
+							// printMeshStateTable(cellSnapshot);
 						}
 						progress = progress + 10*Math.PI / 180; // Increment by 10-degree intervals (Screw radians!)
 				}, 10);
@@ -170,7 +170,7 @@ function Cell(x, y, r, threshold, firePower) {
 				this.fire(stimulateChildren);
 			}
 			var cellSnapshot = cell;
-			printMeshStateTable(cellSnapshot);
+			// printMeshStateTable(cellSnapshot);
 		}		
 	}
 
@@ -182,7 +182,6 @@ function Cell(x, y, r, threshold, firePower) {
 		// Complete the wedge-circle, stimulate children, and reset after a refactory period
 		this.firing = true;
 		fireCount++;
-		printMeshStateTable();
 		printStatisticsTable();
 
 		var parentCell = this;
@@ -204,7 +203,7 @@ function Cell(x, y, r, threshold, firePower) {
 					window.setTimeout(childfn, delay);
 				}
 			}
-			printMeshStateTable();
+			updateCellInfoTable(parentCell.id, 'potential', parentCell.potential);
 		};
 		// this.TimerCollection.fireAnimation = window.setTimeout(fn, 250);
 		window.setTimeout(fn, parentCell.refactoryPeriod);
@@ -281,7 +280,7 @@ function Cell(x, y, r, threshold, firePower) {
 		this.potential = newPotential;
 		stimulationCount++;
 		printStatisticsTable();
-  		printMeshStateTable();
+  		updateCellInfoTable(this.id, 'potential', this.potential);
 	}
 }
 
@@ -553,7 +552,7 @@ function addDendrite(originCell = null, destinationCell, startX, startY, endX, e
 	}
 	destinationCell.inputDendrites.push(newDen);
 	newDen.draw(dendriteColor, 0.5);
-	printMeshStateTable();
+	updateCellInfoTable();
 	printStatisticsTable();
 }
 
@@ -570,7 +569,7 @@ function addCell(newCellX, newCellY, newRadius, newThreshold, newFirePower, init
 	newCell.id = Cells.length;
 	newCell.draw();
 	Cells.push(newCell);
-	printMeshStateTable(newCell);
+	updateCellInfoTable();
 	printStatisticsTable();
 	if (initialHighlight) {
 		newCell.highlight();
@@ -578,29 +577,44 @@ function addCell(newCellX, newCellY, newRadius, newThreshold, newFirePower, init
 	return newCell;
 }
  
-function printMeshStateTable() {
+function updateCellInfoTable(cellid = null, property = null, value = null) {
 	var tbody = document.getElementById("cellInfoTable").getElementsByTagName('tbody')[0];
-	// Delete the rows in the cell info table; then add them back.
-	var rowCount = tbody.rows.length;	// Copy this so it doesn't change as you loop through and delete the rows one at a time
-	for (var j = 0; j < rowCount; j++) {
-		tbody.deleteRow(0);	// Careful. Must pass 0 for each loop, because as one row is deleted, the others move up.
-	}
-	for (let i = 0; i < Cells.length; i++) {
-		let cell = Cells[i];
-		let row = tbody.insertRow(i);
-		row.id = "cellRow"+i;
-		row.addEventListener('mouseover', function() { cell.highlight(); });
-		row.addEventListener('mouseout', function() { cell.unhighlight(); });
-		row.addEventListener('click', function() { cell.toggleSelect(); });
-		row.insertCell(0).innerHTML = cell.id+1;
-		row.insertCell(1).innerHTML = "("+cell.x+", "+cell.y+")";
-		row.insertCell(2).innerHTML = cell.potential;
-		row.insertCell(3).innerHTML = cell.threshold;
-		row.insertCell(4).innerHTML = cell.firePower;
-		row.insertCell(5).innerHTML = cell.inputDendrites.length;
-		row.insertCell(6).innerHTML = cell.outputDendrites.length;
-	}
-	
+	if (cellid == null && property == null && value == null) {
+		// Update the whole table. Delete the rows in the cell info table; then add them back.
+		var rowCount = tbody.rows.length;	// Copy this so it doesn't change as you loop through and delete the rows one at a time
+		for (var j = 0; j < rowCount; j++) {
+			tbody.deleteRow(0);	// Careful. Must pass 0 for each loop, because as one row is deleted, the others move up.
+		}
+		for (let i = 0; i < Cells.length; i++) {
+			let cell = Cells[i];
+			let row = tbody.insertRow(i);
+			row.id = "cellRow"+i;
+			row.addEventListener('mouseover', function() { cell.highlight(); });
+			row.addEventListener('mouseout', function() { cell.unhighlight(); });
+			row.addEventListener('click', function() { cell.toggleSelect(); });
+			row.insertCell(0).innerHTML = cell.id+1;
+			row.insertCell(1).innerHTML = "("+cell.x+", "+cell.y+")";
+			row.insertCell(2).innerHTML = cell.potential;
+			row.insertCell(3).innerHTML = cell.threshold;
+			row.insertCell(4).innerHTML = cell.firePower;
+			row.insertCell(5).innerHTML = cell.inputDendrites.length;
+			row.insertCell(6).innerHTML = cell.outputDendrites.length;
+		}
+	} else if (cellid == null || property == null || value == null) {
+		console.log('Missing argument in updateCellInfoTable().');
+		return;		
+	} else {
+		// Update the given property of the given cell
+		var row = document.getElementById("cellRow"+cellid);
+		switch (property) {
+			case 'potential': row.children[2].innerHTML = value; break;
+			case 'threshold': row.children[3].innerHTML = value; break;
+			case 'firePower': row.children[4].innerHTML = value; break;
+			case 'input'	: row.children[5].innerHTML = value; break;
+			case 'output'	: row.children[6].innerHTML = value; break;
+			default 		: console.log('Unrecognized property passed to updateCellInfoTable().');
+		}
+	}	
 }
 
 function printStatisticsTable() {
@@ -661,7 +675,7 @@ function init() {
 	// because the first cell is stimulated by clicking the "start" or "step" button.
 	addDendrite(null, firstCell, 0, firstCell.y, firstCell.x-firstCell.r, firstCell.y);
 	printStatisticsTable();
-  	printMeshStateTable();
+  	updateCellInfoTable();
   	loop();
 };
 
