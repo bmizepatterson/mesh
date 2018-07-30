@@ -3,7 +3,7 @@ var stimulationInProgress = false;	// False or the timer ID of the stimulation i
 var Cells = [];
 var Dendrites = [];
 var drawingDendrite = false;
-var dendriteLimit = 10;
+var dendriteLimit = 20;
 var ctx = document.getElementById("workspace").getContext("2d");
 var highlightedCell = -1;
 var selectedCell = -1;
@@ -17,6 +17,7 @@ var cellColor = '#000';
 var highlightColor = '#3f51b5';
 var dendriteColor = '#777';
 var wedgeColor = 'rgb(50,50,50)';
+var curveWidth = 30;
 
 // Mesh statistics
 var fireCount = 0;
@@ -332,6 +333,7 @@ function Dendrite(originCell = null, destinationCell, startX, startY, endX, endY
 	this.midpointY = (startY + endY) / 2;
 	this.ctx = ctx;
 	this.arrowCoords = null;
+	this.controlPoint = null;
 
 	this.getArrowCoords = function() {
 		// Calculate (if needed) the coordinates for each side of the arrow
@@ -372,7 +374,24 @@ function Dendrite(originCell = null, destinationCell, startX, startY, endX, endY
 		return this.arrowCoords;
 	}
 
-	this.draw = function (color, width, redrawCells = true) {
+	this.getControlPoint = function() {
+		// Calculate (if needed) the coordinates for the control point needed for drawing this dendrite curve
+		// Uses global curveWidth variable
+		// Returns the coordinates in an array [x, y];
+		var x, y;
+		if (this.startY < this.endY) {
+			x = Math.round(this.midpointX + (curveWidth * Math.sin(Math.PI/2 - Math.asin(2*(this.startX-this.midpointX)/this.length))));
+			y = Math.round(this.midpointY + (curveWidth * Math.cos(Math.PI/2 - Math.asin(2*(this.startX-this.midpointX)/this.length))));
+		} else {
+			x = Math.round(this.midpointX - (curveWidth * Math.sin(Math.PI/2 - Math.asin(2*(this.startX-this.midpointX)/this.length))));
+			y = Math.round(this.midpointY + (curveWidth * Math.cos(Math.PI/2 - Math.asin(2*(this.startX-this.midpointX)/this.length))));
+		}
+		document.getElementById("controlPoint").innerHTML = '(' + x + ', ' + y + ')';
+		this.controlPoint = [x, y];
+		return this.controlPoint;
+	}
+
+	this.draw = function (color, width, redrawCells = true, ignoreLoop = false) {
 	    this.ctx.beginPath();
 	    this.ctx.strokeStyle = color;
 	    this.ctx.lineWidth = width;
@@ -381,18 +400,32 @@ function Dendrite(originCell = null, destinationCell, startX, startY, endX, endY
 		// Iterate through the origin cell's input dendrites come from the current destination cell
 		if (this.originCell != null) {
 			for (let i = 0; i < this.originCell.inputDendrites.length; i++) {
-				if (this.originCell.inputDendrites[i].originCell != null && this.originCell.inputDendrites[i].originCell.id === this.destinationCell.id) {
+				if (this.originCell.inputDendrites[i].originCell == null) {
+					continue;
+				}
+				if (this.originCell.inputDendrites[i].originCell.id === this.destinationCell.id) {
 					loop = true;
 					break;
 				}
 			}
 		}
 			
-		if (loop) {
-			// TO DO
+		if (loop && !ignoreLoop && this.getControlPoint()) {
 			document.getElementById("loopDetected").innerHTML = 'Loop detected between cell ' + this.originCell.id + ' and cell ' + this.destinationCell.id;
 			// Draw this dendrite
-			// Redraw the previous
+			// Erase previous dendrite lines
+			this.draw('#fff', 1, false, true);
+			this.ctx.beginPath();
+			this.ctx.strokeStyle = color;
+			this.ctx.lineWidth = width;
+			this.ctx.moveTo(this.startX, this.startY);
+			this.ctx.quadraticCurveTo(this.controlPoint[0], this.controlPoint[1], this.endX, this.endY);
+			this.ctx.stroke();
+
+			this.ctx.beginPath();
+			this.ctx.fillStyle = 'red';
+			this.ctx.arc(this.controlPoint[0], this.controlPoint[1], 2, 0, Math.PI * 2);
+			this.ctx.fill();
 		} else {
 			this.ctx.moveTo(this.startX, this.startY);
 		    this.ctx.lineTo(this.endX, this.endY);
@@ -407,7 +440,6 @@ function Dendrite(originCell = null, destinationCell, startX, startY, endX, endY
 		    	this.ctx.fill();
 		    }
 		}
-
 	    if (redrawCells) {
 		    if (this.originCell != null) {
 		    	this.originCell.erase();
