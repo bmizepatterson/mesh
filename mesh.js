@@ -10,8 +10,8 @@ var selectedCell = -1;
 var arrowWidth = 10;
 var arrowAngle = Math.PI*0.15 // Must be in radians
 var highlightWidth = 3;
-var highlightOffset = 4;
-var cellBuffer = 30;
+var highlightOffset = 5;
+var interCellBuffer = 30;
 var selectColor = '#3f51b5';
 var cellColor = '#000';
 var highlightColor = '#3f51b5';
@@ -176,13 +176,22 @@ function Cell(x, y, r, threshold, firePower, ctx) {
 	this.fire = function (stimulateChildren) {
 		// Complete the wedge-circle, stimulate children, and reset after a sec
 		this.firing = true;
+		if (this.selected) {
+			// Redraw the background cell
+			this.erase();
+			this.ctx.fillStyle = selectColor;
+			this.ctx.beginPath();
+			this.ctx.arc(this.x,this.y,this.r,0,2*Math.PI);
+			this.ctx.fill();			
+		}
+		// Now draw the yellow 'blink' that indicates the cell is firing
 		this.ctx.fillStyle = '#ffc107';
 		this.ctx.beginPath();
 		this.ctx.moveTo(this.x, this.y);
 		this.ctx.arc(this.x, this.y, this.r*0.8, 0, 2*Math.PI);
 		this.ctx.fill();
-		fireCount++;
 
+		fireCount++;
 		var parentCell = this;
 		printStatisticsTable(parentCell);
 		var fn;
@@ -190,16 +199,16 @@ function Cell(x, y, r, threshold, firePower, ctx) {
 			fn = function () {
 				parentCell.firing = false;
 				parentCell.TimerCollection.fireAnimation = 0;
-				parentCell.eraseInner(); 
-				parentCell.drawPotentialWedge(false, 0, parentCell.potential / parentCell.threshold);
+				parentCell.erase();
+				parentCell.draw(); 
 				parentCell.stimulateChildren();
 			};
 		} else {
 			fn = function () {
 				parentCell.firing = false;
 				parentCell.TimerCollection.fireAnimation = 0;
-				parentCell.eraseInner(); 
-				parentCell.drawPotentialWedge(false, 0, parentCell.potential / parentCell.threshold);
+				parentCell.erase(); 
+				parentCell.draw(); 
 			};
 		}
 		this.TimerCollection.fireAnimation = window.setTimeout(fn, 250);
@@ -553,7 +562,12 @@ function workspaceMouseClick(event) {
 		} else {
 			// If there's room, add a cell at the current mouse location
 			var newRadius = 20;
-			if (x > 500-newRadius-highlightWidth-highlightOffset || y > 500-newRadius-highlightWidth-highlightOffset || checkForCollision(x,y,newRadius+cellBuffer)) {
+			var canvasBufferMinimum = newRadius+highlightWidth+highlightOffset;
+			var canvasBufferMaximum = 500-newRadius-highlightWidth-highlightOffset;
+
+			if (x > canvasBufferMaximum || x < canvasBufferMinimum
+				|| y > canvasBufferMaximum || y < canvasBufferMinimum
+				|| checkForCollision(x,y,newRadius+interCellBuffer)) {
 				displayTip("There is not enough room to place a cell here.", 5000);
 			} else {
 				var threshold = parseInt(document.getElementById("thresholdSetting").value);
