@@ -404,10 +404,10 @@ function Dendrite(originCell = null, destinationCell, startX, startY, endX, endY
 }
 
 function clearWorkspace() {
-	resetWorkspace();
-	// Clear out arrays
+	stopStimulate();
 	Cells = [];
 	Dendrites = [];
+	fireCount = stimulationCount = 0;
 	init();
 }
 
@@ -603,9 +603,9 @@ function updateCellInfoTable(cellid = null, property = null, value = null) {
 	} else if (cellid == null || property == null || value == null) {
 		console.log('Missing argument in updateCellInfoTable().');
 		return;		
-	} else {
+	} else if (document.getElementById("cellRow"+cellid)) {
+		var row = document.getElementById("cellRow"+cellid)
 		// Update the given property of the given cell
-		var row = document.getElementById("cellRow"+cellid);
 		switch (property) {
 			case 'potential': row.children[2].innerHTML = value; break;
 			case 'threshold': row.children[3].innerHTML = value; break;
