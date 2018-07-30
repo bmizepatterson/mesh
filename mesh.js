@@ -31,11 +31,8 @@ function distance(x1, y1, x2, y2) {
 }
 
 function watch() {
-	document.getElementById("drawingDendrite").innerHTML = drawingDendrite;
-	document.getElementById("highlightedCell").innerHTML = highlightedCell;
-	document.getElementById("selectedCell").innerHTML = selectedCell;
 	document.getElementById("stimulateCheck").innerHTML = stimulationInProgress;
-	document.getElementById("currentWedgeAngle").innerHTML = Cells[0].currentWedgeAngle / Math.PI * 180 + 90;
+	document.getElementById("currentWedgeAngle").innerHTML = Math.round(Cells[0].currentWedgeAngle / Math.PI * 180 + 90);
 }
 
 function checkForCollision(x,y,radius = 0) {
@@ -125,7 +122,6 @@ function Cell(x, y, r, threshold, firePower) {
 		}
 		// Complete the wedge-circle, stimulate children, and reset after a refactory period
 		this.firing = true;
-		updateCellInfoTable(this.id, 'firing', this.firing);
 		fireCount++;
 		updateStatisticsTable();
 
@@ -133,7 +129,6 @@ function Cell(x, y, r, threshold, firePower) {
 		var fn = function () {
 			parentCell.potential = 0;
 			parentCell.firing = false;
-			updateCellInfoTable(parentCell.id, 'firing', parentCell.firing);
 			if (parentCell.outputDendrites.length > 0) {
 				var power = parentCell.firePower;
 				for (let i = 0; i < parentCell.outputDendrites.length; i++) {
@@ -528,12 +523,11 @@ function updateCellInfoTable(cellid = null, property = null, value = null) {
 			row.addEventListener('click', function() { cell.toggleSelect(); });
 			row.insertCell(0).innerHTML = cell.id+1;
 			row.insertCell(1).innerHTML = "("+cell.x+", "+cell.y+")";
-			row.insertCell(2).innerHTML = cell.firing ? 'Firing' : 'Not firing';
-			row.insertCell(3).innerHTML = cell.potential;
-			row.insertCell(4).innerHTML = cell.threshold;
-			row.insertCell(5).innerHTML = cell.firePower;
-			row.insertCell(6).innerHTML = cell.inputDendrites.length;
-			row.insertCell(7).innerHTML = cell.outputDendrites.length;
+			row.insertCell(2).innerHTML = cell.potential;
+			row.insertCell(3).innerHTML = cell.threshold;
+			row.insertCell(4).innerHTML = cell.firePower;
+			row.insertCell(5).innerHTML = cell.inputDendrites.length;
+			row.insertCell(6).innerHTML = cell.outputDendrites.length;
 		}
 	} else if (cellid == null || property == null || value == null) {
 		console.log('Missing argument in updateCellInfoTable().');
@@ -542,12 +536,11 @@ function updateCellInfoTable(cellid = null, property = null, value = null) {
 		var row = document.getElementById("cellRow"+cellid)
 		// Update the given property of the given cell
 		switch (property) {
-			case 'firing'	: row.children[2].innerHTML = value ? 'Firing' : 'Not firing'; break;
-			case 'potential': row.children[3].innerHTML = value; break;
-			case 'threshold': row.children[4].innerHTML = value; break;
-			case 'firePower': row.children[5].innerHTML = value; break;
-			case 'input'	: row.children[6].innerHTML = value; break;
-			case 'output'	: row.children[7].innerHTML = value; break;
+			case 'potential': row.children[2].innerHTML = value; break;
+			case 'threshold': row.children[3].innerHTML = value; break;
+			case 'firePower': row.children[4].innerHTML = value; break;
+			case 'input'	: row.children[5].innerHTML = value; break;
+			case 'output'	: row.children[6].innerHTML = value; break;
 			default 		: console.log('Unrecognized property passed to updateCellInfoTable().');
 		}
 	}	
@@ -589,7 +582,7 @@ function init() {
 	canvas.addEventListener("mousemove", workspaceMove);
 	canvas.addEventListener("mouseout", workspaceMoveOut);
 	document.getElementById("startStimulate").addEventListener("click", clickStimulateButton);
-	document.getElementById("stopStimulate").addEventListener("click", stopStimulate);
+	document.getElementById("stopStimulate").addEventListener("click", stopStimulating);
 	document.getElementById("stepStimulate").addEventListener("click", function() { Cells[0].stimulate(1); });
 	document.getElementById("resetWorkspace").addEventListener("click", resetWorkspace);
 	document.getElementById("clearWorkspace").addEventListener("click", clearWorkspace);
