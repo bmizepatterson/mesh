@@ -35,6 +35,7 @@ function watch() {
 	document.getElementById("highlightedCell").innerHTML = highlightedCell;
 	document.getElementById("selectedCell").innerHTML = selectedCell;
 	document.getElementById("stimulateCheck").innerHTML = stimulationInProgress;
+	document.getElementById("currentWedgeAngle").innerHTML = Cells[0].currentWedgeAngle / Math.PI * 180 + 90;
 }
 
 function checkForCollision(x,y,radius = 0) {
@@ -54,12 +55,6 @@ function displayTip(text, time = 5000) {
 	setTimeout(function () { document.getElementById("tip").innerHTML = '&nbsp;'; } , time);
 }
 
-function TimerCollection() {
-	this.wedgeAnimation = 0;
-	this.fireAnimation = 0;
-	this.stimulateChildDelay = 0;
-}
-
 // Object constructors
 function Cell(x, y, r, threshold, firePower) {
 	this.x = x;
@@ -72,10 +67,10 @@ function Cell(x, y, r, threshold, firePower) {
 	this.outputDendrites = [];  // Array of dendrites that connect this cell to its output cells
 	this.highlighted = false;
 	this.selected = false;
-	this.TimerCollection = new TimerCollection();	// An array of any and all animation timers associated with this cell
 	this.firing = false;		// Whether the cell is currently firing.
 	this.refactoryPeriod = 250;
 	this.currentWedgeAngle = -Math.PI/2;
+	this.locked = false;		// If the cell is locked, then it can't be stimulated.
 
 	this.draw = function() {
 		var lineColor = this.selected ? selectColor : cellColor;
@@ -105,92 +100,32 @@ function Cell(x, y, r, threshold, firePower) {
 			ctx.arc(this.x, this.y, this.r * 0.75, 0, 2 * Math.PI);
 			ctx.fill();
 			ctx.closePath();
-		} else if (this.potential > 0) {
+		} else if (this.potential > 0 && !this.locked) {
 			var targetAngle = this.potential / this.threshold * 2 * Math.PI - Math.PI/2;	// -PI/2 starts us at the top of the circle. Dang radians.
-
 			ctx.beginPath();
 			ctx.fillStyle = this.selected ? backgroundColor : wedgeColor;
 			ctx.moveTo(this.x, this.y);
 			ctx.arc(this.x, this.y, this.r * 0.75, -Math.PI/2, this.currentWedgeAngle);
 			ctx.fill();
-			ctx.closePath();
-			
+			ctx.closePath();			
 			if (this.currentWedgeAngle < targetAngle) {
 				this.currentWedgeAngle = this.currentWedgeAngle + (10 * Math.PI / 180); // Increment by 10-degree intervals (Screw radians!)
-			} else if (this.potential === this.threshold) {
+			} 
+			if (this.potential === this.threshold && this.currentWedgeAngle >= 1.5 * Math.PI) {
 				this.fire();
+				this.currentWedgeAngle = -Math.PI/2;
 			}
 		}
-	}
-
-	this.drawWedge = function() {
-		
-	}
-
-	this.drawPotentialWedge = function (animate, oldPotentialRatio = null, newPotentialRatio, stimulateChildren = false) {	
-		if (animate && oldPotentialRatio == null) {
-			console.log('oldPotentialRatio must be passed to Cell::drawPotentialWedge() if animating.');
-		}
-		var fillStyle = this.selected ? '#fff' : wedgeColor;
-		var target = 1.5*Math.PI + (newPotentialRatio*2*Math.PI); // 1.5*PI starts us at the top of the circle. Dang radians.
-		if (animate == true) {
-			var start = 1.5*Math.PI + (oldPotentialRatio*2*Math.PI);
-			// Instantly draw the old wedge, if any
-			if (oldPotentialRatio > 0) {
-				ctx.beginPath();
-				ctx.fillStyle = fillStyle;
-				ctx.moveTo(this.x, this.y);
-				ctx.arc(this.x, this.y, this.r*0.75, 1.5*Math.PI, start);
-				ctx.fill();
-			}
-			// Animate the drawing of the wedge that represents accumulated potential
-			var progress = start;
-			var cell = this;	// In the context of setInterval, 'this' refers to the window object, so copy the current this
-			var wedgeAnimation = window.setInterval(function() {
-						// Update target in case the cell has been stimulated since this animation began
-						var newTarget = cell.potential / cell.threshold;
-						if (progress < Target) {
-							cell.ctx.beginPath();
-							cell.ctx.fillStyle = fillStyle;
-							cell.ctx.moveTo(cell.x, cell.y);
-							cell.ctx.arc(cell.x, cell.y, cell.r*0.75, start, progress);
-							cell.ctx.fill();
-						} else {
-							// If the cell has reached its threshold, then it fires
-							if (newPotentialRatio === 1) {
-								cell.fire(stimulateChildren);
-							}
-							clearInterval(wedgeAnimation);	// End animation
-							cell.TimerCollection.wedgeAnimation = 0;
-							// Take a snapshot of the cell and update the cell info table
-							var cellSnapshot = cell;
-							// printMeshStateTable(cellSnapshot);
-						}
-						progress = progress + 10*Math.PI / 180; // Increment by 10-degree intervals (Screw radians!)
-				}, 10);
-			this.TimerCollection.wedgeAnimation = wedgeAnimation;
-		} else {
-			// Draw without animating
-			ctx.beginPath();
-			ctx.fillStyle = fillStyle;
-			ctx.moveTo(this.x, this.y);
-			ctx.arc(this.x, this.y, this.r*0.75, 1.5*Math.PI, target);
-			ctx.fill();
-			if (newPotentialRatio >= 1) {
-				this.fire(stimulateChildren);
-			}
-			var cellSnapshot = cell;
-			// printMeshStateTable(cellSnapshot);
-		}		
 	}
 
 	this.fire = function () {
-		// If we're already in the middle of firing, then do nothing
+		// If we're already in the middle of firing (including the refactory period), then do nothing
 		if (this.firing) {
 			return;
 		}
 		// Complete the wedge-circle, stimulate children, and reset after a refactory period
 		this.firing = true;
+		updateCellInfoTable(this.id, 'firing', this.firing);
 		fireCount++;
 		updateStatisticsTable();
 
@@ -198,24 +133,18 @@ function Cell(x, y, r, threshold, firePower) {
 		var fn = function () {
 			parentCell.potential = 0;
 			parentCell.firing = false;
-			// parentCell.TimerCollection.fireAnimation = 0;
+			updateCellInfoTable(parentCell.id, 'firing', parentCell.firing);
 			if (parentCell.outputDendrites.length > 0) {
 				var power = parentCell.firePower;
 				for (let i = 0; i < parentCell.outputDendrites.length; i++) {
 					// Delay for a time proportional to the length of the dendrite
 					let childCell = parentCell.outputDendrites[i].destinationCell;
 					let delay = parentCell.outputDendrites[i].length;
-					let childfn = function () {
-						// childCell.TimerCollection.stimulateChildDelay = 0;
-						childCell.stimulate(power);
-					}
-					// this.TimerCollection.stimulateChildDelay = setTimeout(childfn, delay);
-					window.setTimeout(childfn, delay);
+					window.setTimeout( function() { childCell.stimulate(power); } , delay);
 				}
 			}
 			updateCellInfoTable(parentCell.id, 'potential', parentCell.potential);
 		};
-		// this.TimerCollection.fireAnimation = window.setTimeout(fn, 250);
 		window.setTimeout(fn, parentCell.refactoryPeriod);
 	}
 
@@ -240,12 +169,10 @@ function Cell(x, y, r, threshold, firePower) {
 		highlightedCell = -1;
 		this.highlighted = false;
 		document.getElementById("cellInfo").innerHTML = "";
-		// document.getElementById('cellRow'+this.id).style.border = 'initial';
 		var row = document.getElementById('cellRow'+this.id);
 		for (let i = 0; i < row.children.length; i++) {
 			row.children[i].style.border = 'initial';			
 		}
-
 	}
 
 	this.toggleSelect = function () {
@@ -272,7 +199,7 @@ function Cell(x, y, r, threshold, firePower) {
 		}
 	}
 
-	this.unselect = function () {
+	this.unselect = function() {
 		// Set selected flags
 		selectedCell = -1;
 		this.selected = false;
@@ -284,13 +211,25 @@ function Cell(x, y, r, threshold, firePower) {
 		}
 	}
 
-	this.stimulate = function (power) {
+	this.stimulate = function(power) {
+		if (this.locked) {
+			return;
+		}
 		var newPotential = this.potential + power;
 		newPotential = (newPotential > this.threshold) ? this.threshold : newPotential;
 		this.potential = newPotential;
 		stimulationCount++;
 		updateStatisticsTable();
   		updateCellInfoTable(this.id, 'potential', this.potential);
+	}
+
+	this.reset = function() {
+		this.locked = true;
+		this.firing = false;
+		this.potential = 0;
+		this.currentWedgeAngle = -1.5 * Math.PI;
+		this.unselect();
+		this.unhighlight();
 	}
 }
 
@@ -414,38 +353,23 @@ function Dendrite(originCell = null, destinationCell, startX, startY, endX, endY
 }
 
 function clearWorkspace() {
-	stopStimulate();
+	resetWorkspace();
 	Cells = [];
 	Dendrites = [];
-	fireCount = stimulationCount = 0;
 	init();
 }
 
 function resetWorkspace() {
-	// Stop all stimulation if necessary
-	stopStimulate();
-
+	// Stop stimulating if necessary
+	stopStimulating();
 	// Halt all ongoing wedge animations and reset all cell potentials to zero
 	for (let i = 0; i < Cells.length; i++) {
-		// Clear currently running timers
-		if (Cells[i].TimerCollection.wedgeAnimation) {
-			clearInterval(Cells[i].TimerCollection.wedgeAnimation);
-		}
-		if (Cells[i].TimerCollection.fireAnimation) {
-			clearInterval(Cells[i].TimerCollection.fireAnimation);
-		}
-		if (Cells[i].TimerCollection.stimulateChildDelay) {
-			clearInterval(Cells[i].TimerCollection.stimulateChildDelay);
-		}
-		Cells[i].potential = 0;
-		Cells[i].firing = false;
-		Cells[i].unselect();
-		Cells[i].unhighlight();
-
+		Cells[i].reset();
 	}
-	fireCount = 0;
-	stimulationCount = 0;
+	fireCount = stimulationCount = 0;
 	document.getElementById("tip").innerHTML = '';
+	updateCellInfoTable();
+	updateStatisticsTable();
 }
 
 function workspaceMouseClick(event) {
@@ -520,7 +444,7 @@ function workspaceMoveOut(event) {
 	document.getElementById("mousecoords").innerHTML = "";
 	// Make sure no cells are highlighted
 	if (highlightedCell > -1) {
-		Cells[highlightedCell].unhighlight;
+		Cells[highlightedCell].unhighlight();
 	}
 }
 
@@ -532,7 +456,7 @@ function clickStimulateButton() {
 	stimulationInProgress = setInterval(function() { Cells[0].stimulate(1); }, 1000);
 }
 
-function stopStimulate() {
+function stopStimulating() {
 	if (stimulationInProgress) {
 		clearInterval(stimulationInProgress);
 		stimulationInProgress = false;
@@ -604,11 +528,12 @@ function updateCellInfoTable(cellid = null, property = null, value = null) {
 			row.addEventListener('click', function() { cell.toggleSelect(); });
 			row.insertCell(0).innerHTML = cell.id+1;
 			row.insertCell(1).innerHTML = "("+cell.x+", "+cell.y+")";
-			row.insertCell(2).innerHTML = cell.potential;
-			row.insertCell(3).innerHTML = cell.threshold;
-			row.insertCell(4).innerHTML = cell.firePower;
-			row.insertCell(5).innerHTML = cell.inputDendrites.length;
-			row.insertCell(6).innerHTML = cell.outputDendrites.length;
+			row.insertCell(2).innerHTML = cell.firing ? 'Firing' : 'Not firing';
+			row.insertCell(3).innerHTML = cell.potential;
+			row.insertCell(4).innerHTML = cell.threshold;
+			row.insertCell(5).innerHTML = cell.firePower;
+			row.insertCell(6).innerHTML = cell.inputDendrites.length;
+			row.insertCell(7).innerHTML = cell.outputDendrites.length;
 		}
 	} else if (cellid == null || property == null || value == null) {
 		console.log('Missing argument in updateCellInfoTable().');
@@ -617,11 +542,12 @@ function updateCellInfoTable(cellid = null, property = null, value = null) {
 		var row = document.getElementById("cellRow"+cellid)
 		// Update the given property of the given cell
 		switch (property) {
-			case 'potential': row.children[2].innerHTML = value; break;
-			case 'threshold': row.children[3].innerHTML = value; break;
-			case 'firePower': row.children[4].innerHTML = value; break;
-			case 'input'	: row.children[5].innerHTML = value; break;
-			case 'output'	: row.children[6].innerHTML = value; break;
+			case 'firing'	: row.children[2].innerHTML = value ? 'Firing' : 'Not firing'; break;
+			case 'potential': row.children[3].innerHTML = value; break;
+			case 'threshold': row.children[4].innerHTML = value; break;
+			case 'firePower': row.children[5].innerHTML = value; break;
+			case 'input'	: row.children[6].innerHTML = value; break;
+			case 'output'	: row.children[7].innerHTML = value; break;
 			default 		: console.log('Unrecognized property passed to updateCellInfoTable().');
 		}
 	}	
@@ -652,14 +578,7 @@ function draw() {
 	// Draw all cells
 	for (let c = 0; c < Cells.length; c++) {
 		Cells[c].draw();
-			Cells[c].drawWedge();
-		
-		// if (Cells[c].potential === Cells[c].threshold && Cells[c].currentWedgeAngle === -Math.PI/2) {
-		// 	Cells[c].fire();
-		// } else {
-		// }
 	}
-
 }
 
 function init() {
@@ -681,7 +600,6 @@ function init() {
 
 	// Initial setup of the workspace includes one cell and one dendrite
 	var firstCell = addCell(75, 250, 20, 1, 1, false, ctx);
-	firstCell.drawPotentialWedge(false, null, firstCell.potential / firstCell.threshold);
 	// Create the first dendrite, which is a special case: it doesn't have an origin cell
 	// because the first cell is stimulated by clicking the "start" or "step" button.
 	addDendrite(null, firstCell, 0, firstCell.y, firstCell.x-firstCell.r, firstCell.y);
