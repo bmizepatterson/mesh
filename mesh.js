@@ -40,9 +40,9 @@ document.getElementById("stepStimulate").addEventListener("click", function() { 
 document.getElementById("resetWorkspace").addEventListener("click", resetWorkspace);
 document.getElementById("clearWorkspace").addEventListener("click", clearWorkspace);
 document.getElementById("thresholdSetting").addEventListener("change", updateThresholdValue);
-document.getElementById("thresholdSetting").addEventListener("move", updateThresholdValue);
+document.getElementById("thresholdSetting").addEventListener("mousemove", updateThresholdValue);
 document.getElementById("firepowerSetting").addEventListener("change", updateFirepowerValue);
-document.getElementById("firepowerSetting").addEventListener("move", updateFirepowerValue);
+document.getElementById("firepowerSetting").addEventListener("mousemove", updateFirepowerValue);
 
 
 function distance(x1, y1, x2, y2) {
@@ -94,6 +94,7 @@ function Cell(x, y, r, threshold, firePower, ctx) {
 	this.selected = false;
 	this.ctx = ctx;				// The drawing context of the HTML canvas
 	this.TimerCollection = new TimerCollection();	// An array of any and all animation timers associated with this cell
+	this.firing = false;		// Whether the cell is currently firing.
 
 	this.draw = function () {
 		var color = this.selected ? selectColor : cellColor;
@@ -135,7 +136,9 @@ function Cell(x, y, r, threshold, firePower, ctx) {
 			var progress = start;
 			var cell = this;	// In the context of setInterval, 'this' refers to the window object, so copy the current this
 			var wedgeAnimation = window.setInterval(function() {
-						if (progress < target) {
+						// Update target in case the cell has been stimulated since this animation began
+						var newTarget = cell.potential / cell.threshold;
+						if (progress < Target) {
 							cell.ctx.beginPath();
 							cell.ctx.fillStyle = fillStyle;
 							cell.ctx.moveTo(cell.x, cell.y);
@@ -162,36 +165,44 @@ function Cell(x, y, r, threshold, firePower, ctx) {
 			this.ctx.moveTo(this.x, this.y);
 			this.ctx.arc(this.x, this.y, this.r*0.75, 1.5*Math.PI, target);
 			this.ctx.fill();
+			if (newPotentialRatio >= 1) {
+				this.fire(stimulateChildren);
+			}
+			var cellSnapshot = cell;
+			printMeshStateTable(cellSnapshot);
 		}		
 	}
 
 	this.fire = function (stimulateChildren) {
 		// Complete the wedge-circle, stimulate children, and reset after a sec
+		this.firing = true;
 		this.ctx.fillStyle = '#ffc107';
 		this.ctx.beginPath();
 		this.ctx.moveTo(this.x, this.y);
 		this.ctx.arc(this.x, this.y, this.r*0.8, 0, 2*Math.PI);
 		this.ctx.fill();
+		fireCount++;
+
 		var parentCell = this;
+		printStatisticsTable(parentCell);
 		var fn;
 		if (stimulateChildren) {
 			fn = function () {
+				parentCell.firing = false;
 				parentCell.TimerCollection.fireAnimation = 0;
 				parentCell.eraseInner(); 
-				parentCell.drawPotentialWedge(true, 0, parentCell.potential / parentCell.threshold);
+				parentCell.drawPotentialWedge(false, 0, parentCell.potential / parentCell.threshold);
 				parentCell.stimulateChildren();
 			};
 		} else {
 			fn = function () {
+				parentCell.firing = false;
 				parentCell.TimerCollection.fireAnimation = 0;
 				parentCell.eraseInner(); 
-				parentCell.drawPotentialWedge(true, 0, parentCell.potential / parentCell.threshold);
+				parentCell.drawPotentialWedge(false, 0, parentCell.potential / parentCell.threshold);
 			};
 		}
-		var fireAnimation = window.setTimeout(fn, 250);
-		this.TimerCollection.fireAnimation = fireAnimation;
-		fireCount++;
-		printStatisticsTable();
+		this.TimerCollection.fireAnimation = window.setTimeout(fn, 250);
 	}
 
 	this.redrawDendrites = function () {
@@ -286,7 +297,8 @@ function Cell(x, y, r, threshold, firePower, ctx) {
 
 	this.stimulate = function (power) {
 		// If we're in the middle of firing, then ignore stimulation
-		if (this.TimerCollection.fireAnimation) {
+		if (this.firing) {
+			document.getElementById("tip").innerHTML = 'Cannot stimulate cell ' + this.id + ': Currently firing.';
 			return;
 		}
 
@@ -301,7 +313,7 @@ function Cell(x, y, r, threshold, firePower, ctx) {
 		if (newPotential >= this.threshold) {
 			this.potential = 0;			
 		}
-		this.drawPotentialWedge(true, oldPotentialRatio, newPotentialRatio, true);
+		this.drawPotentialWedge(false, oldPotentialRatio, newPotentialRatio, true);
 	}
 
 	this.stimulateChildren = function () {
@@ -482,6 +494,7 @@ function resetWorkspace() {
 			clearInterval(Cells[i].TimerCollection.stimulateChildDelay);
 		}
 		Cells[i].potential = 0;
+		Cells[i].firing = false;
 		if (Cells[i].selected) {
 			Cells[i].unselect();
 		} else {
@@ -491,6 +504,7 @@ function resetWorkspace() {
 	fireCount = 0;
 	selectedCell = -1;
 	highlightedCell = -1;
+	document.getElementById("tip").innerHTML = '';
 	printMeshStateTable();
 	printStatisticsTable();
 }
@@ -653,7 +667,7 @@ function printMeshStateTable(cell = null) {
 		if (tbody.rows.length > cell.id) {
 			// Find the row for this cell and update it
 			var cellRow = tbody.rows[cell.id];
-			cellRow.cells[0].innerHTML = cell.id;
+			cellRow.cells[0].innerHTML = cell.id+1;
 			cellRow.cells[1].innerHTML = "("+cell.x+", "+cell.y+")";
 			cellRow.cells[2].innerHTML = cell.potential;
 			cellRow.cells[3].innerHTML = cell.threshold;
