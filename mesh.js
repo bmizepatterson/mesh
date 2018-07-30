@@ -218,11 +218,11 @@ function Cell(x, y, r, threshold, firePower, ctx) {
 		// First erase them, then draw them again
 		for (var i = 0; i < this.inputDendrites.length; i++) {
 			this.inputDendrites[i].draw('#fff', 3);
-			this.inputDendrites[i].draw(dendriteColor, 1);
+			this.inputDendrites[i].draw(dendriteColor, 0.5);
 		}
 		for (var i = 0; i < this.outputDendrites.length; i++) {
 			this.outputDendrites[i].draw('#fff', 3);
-			this.outputDendrites[i].draw(dendriteColor, 1);
+			this.outputDendrites[i].draw(dendriteColor, 0.5);
 		}
 	}
 
@@ -437,7 +437,7 @@ function Dendrite(originCell = null, destinationCell, startX, startY, endX, endY
 			document.getElementById("loopDetected").innerHTML = 'Loop detected between cell ' + this.originCell.id + ' and cell ' + this.destinationCell.id;
 			// Draw this dendrite
 			// Erase previous dendrite lines
-			this.draw('#fff', 1, false, true);
+			this.draw('#fff', 0.5, false, true);
 			this.ctx.beginPath();
 			this.ctx.strokeStyle = color;
 			this.ctx.lineWidth = width;
@@ -644,7 +644,7 @@ function addDendrite(originCell = null, destinationCell, startX, startY, endX, e
 		originCell.outputDendrites.push(newDen);
 	}
 	destinationCell.inputDendrites.push(newDen);
-	newDen.draw(dendriteColor, 1);
+	newDen.draw(dendriteColor, 0.5);
 	printMeshStateTable();
 	printStatisticsTable();
 }
