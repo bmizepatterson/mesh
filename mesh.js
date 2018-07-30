@@ -182,7 +182,7 @@ function Cell(x, y, r, threshold, firePower) {
 		// Complete the wedge-circle, stimulate children, and reset after a refactory period
 		this.firing = true;
 		fireCount++;
-		printStatisticsTable();
+		updateStatisticsTable();
 
 		var parentCell = this;
 		var fn = function () {
@@ -279,7 +279,7 @@ function Cell(x, y, r, threshold, firePower) {
 		newPotential = (newPotential > this.threshold) ? this.threshold : newPotential;
 		this.potential = newPotential;
 		stimulationCount++;
-		printStatisticsTable();
+		updateStatisticsTable();
   		updateCellInfoTable(this.id, 'potential', this.potential);
 	}
 }
@@ -553,7 +553,7 @@ function addDendrite(originCell = null, destinationCell, startX, startY, endX, e
 	destinationCell.inputDendrites.push(newDen);
 	newDen.draw(dendriteColor, 0.5);
 	updateCellInfoTable();
-	printStatisticsTable();
+	updateStatisticsTable();
 }
 
 function addCell(newCellX, newCellY, newRadius, newThreshold, newFirePower, initialHighlight = true) {
@@ -570,7 +570,7 @@ function addCell(newCellX, newCellY, newRadius, newThreshold, newFirePower, init
 	newCell.draw();
 	Cells.push(newCell);
 	updateCellInfoTable();
-	printStatisticsTable();
+	updateStatisticsTable();
 	if (initialHighlight) {
 		newCell.highlight();
 	}
@@ -617,7 +617,7 @@ function updateCellInfoTable(cellid = null, property = null, value = null) {
 	}	
 }
 
-function printStatisticsTable() {
+function updateStatisticsTable() {
 	document.getElementById("totalCells").innerHTML = Cells.length;
 	document.getElementById("totalDendrites").innerHTML = Dendrites.length;
 	document.getElementById("totalFires").innerHTML = fireCount;
@@ -674,7 +674,7 @@ function init() {
 	// Create the first dendrite, which is a special case: it doesn't have an origin cell
 	// because the first cell is stimulated by clicking the "start" or "step" button.
 	addDendrite(null, firstCell, 0, firstCell.y, firstCell.x-firstCell.r, firstCell.y);
-	printStatisticsTable();
+	updateStatisticsTable();
   	updateCellInfoTable();
   	loop();
 };
