@@ -490,6 +490,13 @@ function resetWorkspace() {
 	}
 	fireCount = stimulationCount = firingNow = 0;
 	document.getElementById("tip").innerHTML = '';
+	document.getElementById("startStimulate").style.display = 'block';
+	document.getElementById("startStimulate").disabled = false;
+	document.getElementById("stopStimulate").style.display = 'none';
+	document.getElementById("stepStimulate").disabled = false;
+	document.getElementById("pauseActivity").style.display = 'block';
+	document.getElementById("pauseActivity").disabled = false;
+	document.getElementById("resumeActivity").style.display = 'none';
 	updateCellInfoTable();
 	updateStatisticsTable();
 }
@@ -592,14 +599,15 @@ function stopStimulating() {
 }
 
 function pauseActivity() {
+	for (let i = 0; i < Cells.length; i++) {
+		if (Cells[i].deleted) continue;
+		Cells[i].locked = true;
+	}
 	document.getElementById("resumeActivity").style.display = "block";
 	document.getElementById("resumeActivity").dispatchEvent(new Event('mouseover'));
 	document.getElementById("pauseActivity").style.display = "none";
 	document.getElementById("stopStimulate").disabled = true;
 	document.getElementById("startStimulate").disabled = true;
-	for (let i = 0; i < Cells.length; i++) {
-		Cells[i].locked = true;
-	}
 }
 
 function resumeActivity() {
@@ -736,7 +744,7 @@ function drawIcon() {
 	iconctx.fill();
 	iconctx.closePath();
 	iconctx.beginPath();
-	iconctx.fillStyle = firingNow ? fireColor : backgroundColor;
+	iconctx.fillStyle = firingCellCount ? fireColor : backgroundColor;
 	iconctx.moveTo(20,20);
 	iconctx.arc(20,20,15,-Math.PI/2,2*Math.PI/3);
 	iconctx.fill();
