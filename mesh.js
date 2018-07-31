@@ -2,6 +2,8 @@ var				   canvas = document.getElementById('workspace'),
 					  ctx = canvas.getContext("2d"),
 	stimulationInProgress = false,	// False or the timer ID of the stimulation in progress
 		  drawingDendrite = false,
+ 		  activeCellCount = 0,
+		  firingCellCount = 0,
 		  highlightedCell = -1,
 	  highlightedDendrite = -1,
 			 selectedCell = -1,
@@ -23,9 +25,8 @@ var				   canvas = document.getElementById('workspace'),
 		  backgroundColor = '#fff',
 		  		fireColor = '#ffc107',
 			   curveWidth = 30,
-				fireCount = 0;
+				fireCount = 0,
 		 stimulationCount = 0;
-		 		firingNow = 0;
 
 // Object constructors
 function Cell(x, y, r, threshold, firePower, refactoryPeriod) {
@@ -40,6 +41,7 @@ function Cell(x, y, r, threshold, firePower, refactoryPeriod) {
 	this.highlighted = false;
 	this.selected = false;
 	this.firing = false;		// Whether the cell is currently firing.
+	this.active = false;		// A cell is active if it is currently being stimulated
 	this.refactoryPeriod = refactoryPeriod;
 	this.currentWedgeAngle = -Math.PI/2;
 	this.locked = false;		// If the cell is locked, then it can't be stimulated.
@@ -77,7 +79,7 @@ function Cell(x, y, r, threshold, firePower, refactoryPeriod) {
 			ctx.moveTo(this.x, this.y);
 			ctx.arc(this.x, this.y, this.r * 0.75, -Math.PI/2, this.currentWedgeAngle);
 			ctx.fill();
-			ctx.closePath();			
+			ctx.closePath();
 			if (this.currentWedgeAngle < targetAngle && !this.locked) {
 				this.currentWedgeAngle = this.currentWedgeAngle + (10 * Math.PI / 180); // Increment by 10-degree intervals (Screw radians!)
 			} 
@@ -85,6 +87,10 @@ function Cell(x, y, r, threshold, firePower, refactoryPeriod) {
 				this.fire();
 				this.currentWedgeAngle = -Math.PI/2;
 			}
+			if (this.currentWedgeAngle >= targetAngle) {
+				this.active = false;
+			}
+			updateCellInfoTable(this.id, 'status', this.getStatus());
 		}
 	}
 
@@ -96,14 +102,16 @@ function Cell(x, y, r, threshold, firePower, refactoryPeriod) {
 		// Complete the wedge-circle, stimulate children, and reset after a refactory period
 		this.firing = true;
 		fireCount++;
-		firingNow++;
 		updateStatisticsTable();
+		updateCellInfoTable(this.id, 'status', this.getStatus());
 
 		var parentCell = this;
 		var fn = function () {
 			parentCell.potential = 0;
 			parentCell.firing = false;
-			firingNow--;
+			parentCell.active = false;
+			updateCellInfoTable(parentCell.id, 'potential', parentCell.potential);			
+			updateCellInfoTable(parentCell.id, 'status', parentCell.getStatus());
 			if (parentCell.outputDendrites.length > 0) {
 				var power = parentCell.firePower;
 				for (let i = 0; i < parentCell.outputDendrites.length; i++) {
@@ -113,8 +121,7 @@ function Cell(x, y, r, threshold, firePower, refactoryPeriod) {
 					let delay = parentCell.outputDendrites[i].length;
 					window.setTimeout( function() { childCell.stimulate(power); } , delay);
 				}
-			}
-			updateCellInfoTable(parentCell.id, 'potential', parentCell.potential);
+			}	
 		};
 		window.setTimeout(fn, parentCell.refactoryPeriod);
 	}
@@ -204,12 +211,14 @@ function Cell(x, y, r, threshold, firePower, refactoryPeriod) {
 		if (this.locked) {
 			return;
 		}
+		this.active = true;
 		var newPotential = this.potential + power;
 		newPotential = (newPotential > this.threshold) ? this.threshold : newPotential;
 		this.potential = newPotential;
 		stimulationCount++;
 		updateStatisticsTable();
   		updateCellInfoTable(this.id, 'potential', this.potential);
+  		updateCellInfoTable(this.id, 'status', this.getStatus());
 	}
 
 	this.reset = function() {
@@ -234,6 +243,16 @@ function Cell(x, y, r, threshold, firePower, refactoryPeriod) {
 		}
 		updateStatisticsTable();
 		updateCellInfoTable();
+	}
+
+	this.getStatus = function() {
+		if (this.firing) {
+			return "Firing";
+		} else if (this.active) {
+			return "Active";
+		} else {
+			return "Inactive";
+		}		
 	}
 }
 
@@ -408,6 +427,19 @@ function distance(x1, y1, x2, y2) {
 function watch() {
 	document.getElementById("stimulateCheck").innerHTML = stimulationInProgress;
 	document.getElementById("currentWedgeAngle").innerHTML = Math.round(Cells[0].currentWedgeAngle / Math.PI * 180 + 90);
+	// Count active cells
+	var activeTemp = 0;
+	var firingTemp = 0;
+	for (let i = 0; i < Cells.length; i++) {
+		if (Cells[i].deleted) continue;
+		if (Cells[i].active) activeTemp++;
+		if (Cells[i].firing) firingTemp++;
+	}
+	activeCellCount = activeTemp;
+	firingCellCount = firingTemp;
+	// If there is activity in the mesh, then enable the pause button
+	document.getElementById("pauseActivity").disabled = activeCellCount ? false : true;
+	updateStatisticsTable();
 }
 
 function checkForCollision(x,y,radius = 0) {
@@ -516,7 +548,6 @@ function workspaceMove(event) {
 	// Show the mouse coordinates within the canvas for reference
 	var x = event.clientX - canvas.parentElement.offsetLeft + window.pageXOffset;
     var y = event.clientY - canvas.parentElement.offsetTop + window.pageYOffset;
-    // document.getElementById("mousecoords").innerHTML = "(" + event.clientX + "-" + canvas.offsetLeft + "+" + window.pageXOffset + "=" + x + ", " + event.clientY + "-" + canvas.offsetTop + "+" + window.pageYOffset + "=" + y + ")";
     document.getElementById("mousecoords").innerHTML = "(" + x + ", " + y + ")";
 	// Check for collision with a cell body. 
 	var collision = checkForCollision(x,y);
@@ -659,12 +690,13 @@ function updateCellInfoTable(cellid = null, property = null, value = null) {
 			row.addEventListener('click', function() { cell.toggleSelect(); });
 			row.insertCell(0).innerHTML = rowCounter;
 			row.insertCell(1).innerHTML = "("+cell.x+", "+cell.y+")";
-			row.insertCell(2).innerHTML = cell.potential;
-			row.insertCell(3).innerHTML = cell.threshold;
-			row.insertCell(4).innerHTML = cell.firePower;
-			row.insertCell(5).innerHTML = cell.refactoryPeriod;
-			row.insertCell(6).innerHTML = cell.inputDendrites.length;
-			row.insertCell(7).innerHTML = cell.outputDendrites.length;
+			row.insertCell(2).innerHTML = cell.getStatus();
+			row.insertCell(3).innerHTML = cell.potential;
+			row.insertCell(4).innerHTML = cell.threshold;
+			row.insertCell(5).innerHTML = cell.firePower;
+			row.insertCell(6).innerHTML = cell.refactoryPeriod;
+			row.insertCell(7).innerHTML = cell.inputDendrites.length;
+			row.insertCell(8).innerHTML = cell.outputDendrites.length;
 		}
 	} else if (cellid == null || property == null || value == null) {
 		console.log('Missing argument in updateCellInfoTable().');
@@ -673,13 +705,14 @@ function updateCellInfoTable(cellid = null, property = null, value = null) {
 		var row = document.getElementById("cellRow"+cellid)
 		// Update the given property of the given cell
 		switch (property) {
-			case 'potential': row.children[2].innerHTML = value; break;
-			case 'threshold': row.children[3].innerHTML = value; break;
-			case 'firePower': row.children[4].innerHTML = value; break;
-			case 'refactoryPeriod' : row.children[5].innerHTML = value; break;
-			case 'input'	: row.children[6].innerHTML = value; break;
-			case 'output'	: row.children[7].innerHTML = value; break;
-			default 		: console.log('Unrecognized property passed to updateCellInfoTable().');
+			case 'status'		   : row.children[2].innerHTML = value; break;
+			case 'potential'	   : row.children[3].innerHTML = value; break;
+			case 'threshold'	   : row.children[4].innerHTML = value; break;
+			case 'firePower'	   : row.children[5].innerHTML = value; break;
+			case 'refactoryPeriod' : row.children[6].innerHTML = value; break;
+			case 'input'		   : row.children[7].innerHTML = value; break;
+			case 'output'		   : row.children[8].innerHTML = value; break;
+			default 			   : console.log('Unrecognized property passed to updateCellInfoTable().');
 		}
 	}	
 }
@@ -689,7 +722,8 @@ function updateStatisticsTable() {
 	document.getElementById("totalDendrites").innerHTML = countDendrites();
 	document.getElementById("totalFires").innerHTML = fireCount;
 	document.getElementById("totalStimulations").innerHTML = stimulationCount;
-	document.getElementById("firingNow").innerHTML = firingNow;
+	document.getElementById("firingNow").innerHTML = firingCellCount;
+	document.getElementById("meshActivity").innerHTML = Math.round(activeCellCount / countCells() * 100) + '%';
 }
 
 function drawIcon() {
