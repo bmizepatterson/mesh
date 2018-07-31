@@ -24,7 +24,7 @@ var				   canvas = document.getElementById('workspace'),
 			   wedgeColor = 'rgb(50,50,50)',
 		  backgroundColor = '#fff',
 		  		fireColor = '#ffc107',
-			   curveWidth = 30,
+			   curveWidth = 20,
 				fireCount = 0,
 		 stimulationCount = 0;
 
@@ -268,6 +268,7 @@ function Dendrite(originCell = null, destinationCell, startX, startY, endX, endY
 	this.midpointY = (startY + endY) / 2;
 	this.arrowCoords = null;
 	this.controlPoint = null;
+	this.arc = null;
 	this.deleted = false;
 	this.highlighted = false;
 
@@ -311,9 +312,9 @@ function Dendrite(originCell = null, destinationCell, startX, startY, endX, endY
 	}
 
 	this.getControlPoint = function() {
-		// Calculate (if needed) the coordinates for the control point needed for drawing this dendrite curve
+		// Calculate (if needed) the coordinates for the control point needed for drawing the arc between two cells
 		// Uses global curveWidth variable
-		// Returns the coordinates in an array [x, y];
+		// Returns the coordinates in an array [x, y].
 		if (this.controlPoint == null) {
 			var x, y;
 			if (this.startY < this.endY) {
@@ -327,6 +328,31 @@ function Dendrite(originCell = null, destinationCell, startX, startY, endX, endY
 			this.controlPoint = [x, y];
 		}
 		return this.controlPoint;
+	}
+
+	this.getArc = function() {
+		// Calculate (if needed) the coordinates and radius of the arc to draw between two cells
+		// Returns the coordinates in an array [x, y, radius].
+		if (this.arc == null) {
+			// Define vertices of triangle ABC with circumcenter P
+			var Ax, Ay, Bx, By, Cx, Cy, Px, Py, Pr;
+			var Ax2, Ay2, Bx2, By2, Cx2, Cy2;	// i.e. 'Ax squared', etc. For making the formula more readable. Hopefully.
+
+			Ax = this.startX; Ay = this.startY;
+			Bx = this.endX; By = this.endY;
+			Cx = this.getControlPoint()[0]; Cy = this.getControlPoint()[1];
+			Ax2 = Ax*Ax; Ay2 = Ay*Ay; Bx2 = Bx*Bx; By2 = By*By; Cx2 = Cx*Cx; Cy2 = Cy*Cy;
+
+			Py = ( ( (Bx-Ax) * (Cx2+Cy2-Bx2-By2) ) - ( (Cx-Bx) * (Bx2+By2-Ax2-Ay2) ) ) / ( (2 * (Cy-By) * (Bx-Ax) ) - (2 * (By-Ay) * (Cx-Bx) ) );
+			Px = ( (Bx2+By2-Ax2-Ay2) - (2 * Py * (By-Ay) ) ) / ( 2 * (Bx-Ax) );
+			Pr = distance(Px, Py, Ax, Ay);
+			Py = Math.round(Py);
+			Px = Math.round(Px);
+			Pr = Math.round(Pr);
+			document.getElementById("arcCenter").innerHTML = '(' + Px + ', ' + Py + ', ' + Pr + ')';
+			this.arc = [Px, Py, Pr];
+		}
+		return this.arc;
 	}
 
 	this.draw = function() {
@@ -346,10 +372,12 @@ function Dendrite(originCell = null, destinationCell, startX, startY, endX, endY
 				}
 			}
 		}	
-		if (loop && this.getControlPoint()) {
+		if (loop) {
+			this.getArc();
 			ctx.beginPath();
-			ctx.moveTo(this.startX, this.startY);
-			ctx.quadraticCurveTo(this.controlPoint[0], this.controlPoint[1], this.endX, this.endY);
+			// ctx.moveTo(this.arc[0], this.arc[1]);
+			ctx.arc(this.arc[0], this.arc[1], this.arc[2], 0, 2*Math.PI);
+			// ctx.quadraticCurveTo(this.controlPoint[0], this.controlPoint[1], this.endX, this.endY);
 			ctx.stroke();
 			ctx.closePath();
 		} else {
