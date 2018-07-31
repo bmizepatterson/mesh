@@ -97,7 +97,7 @@ function Cell(x, y, r, threshold, firePower) {
 			ctx.arc(this.x, this.y, this.r * 0.75, 0, 2 * Math.PI);
 			ctx.fill();
 			ctx.closePath();
-		} else if (this.potential > 0 && !this.locked) {
+		} else if (this.potential > 0) {
 			var targetAngle = this.potential / this.threshold * 2 * Math.PI - Math.PI/2;	// -PI/2 starts us at the top of the circle. Dang radians.
 			ctx.beginPath();
 			ctx.fillStyle = this.selected ? backgroundColor : wedgeColor;
@@ -105,7 +105,7 @@ function Cell(x, y, r, threshold, firePower) {
 			ctx.arc(this.x, this.y, this.r * 0.75, -Math.PI/2, this.currentWedgeAngle);
 			ctx.fill();
 			ctx.closePath();			
-			if (this.currentWedgeAngle < targetAngle) {
+			if (this.currentWedgeAngle < targetAngle && !this.locked) {
 				this.currentWedgeAngle = this.currentWedgeAngle + (10 * Math.PI / 180); // Increment by 10-degree intervals (Screw radians!)
 			} 
 			if (this.potential === this.threshold && this.currentWedgeAngle >= 1.5 * Math.PI) {
@@ -222,9 +222,11 @@ function Cell(x, y, r, threshold, firePower) {
 		this.locked = true;
 		this.firing = false;
 		this.potential = 0;
-		this.currentWedgeAngle = -1.5 * Math.PI;
+		this.currentWedgeAngle = -Math.PI/2;
 		this.unselect();
 		this.unhighlight();
+		var cell = this;
+		window.setTimeout(function() { cell.locked = false; }, 1000);
 	}
 }
 
@@ -321,8 +323,6 @@ function Dendrite(originCell = null, destinationCell, startX, startY, endX, endY
 		}	
 		if (loop && !ignoreLoop && this.getControlPoint()) {
 			ctx.beginPath();
-			// ctx.strokeStyle = color;
-			// ctx.lineWidth = width;
 			ctx.moveTo(this.startX, this.startY);
 			ctx.quadraticCurveTo(this.controlPoint[0], this.controlPoint[1], this.endX, this.endY);
 			ctx.stroke();
@@ -336,7 +336,6 @@ function Dendrite(originCell = null, destinationCell, startX, startY, endX, endY
 			// Draw arrow
 		    if (this.getArrowCoords()) {
 		    	ctx.beginPath();
-		    	// ctx.strokeStyle = this.color;
 		    	ctx.moveTo(this.arrowCoords[0], this.arrowCoords[1]);
 		    	ctx.lineTo(Math.round(this.midpointX), Math.round(this.midpointY));
 		    	ctx.lineTo(this.arrowCoords[2], this.arrowCoords[3]);
@@ -458,6 +457,22 @@ function stopStimulating() {
 		document.getElementById("stopStimulate").style.display = "none";
 		document.getElementById("startStimulate").style.display = "block";
 		document.getElementById("stepStimulate").disabled = false;
+	}
+}
+
+function pauseActivity() {
+	document.getElementById("resumeActivity").style.display = "block";
+	document.getElementById("pauseActivity").style.display = "none";
+	for (let i = 0; i < Cells.length; i++) {
+		Cells[i].locked = true;
+	}
+}
+
+function resumeActivity() {
+	document.getElementById("resumeActivity").style.display = "none";
+	document.getElementById("pauseActivity").style.display = "block";
+	for (let i = 0; i < Cells.length; i++) {
+		Cells[i].locked = false;
 	}
 }
 
@@ -583,6 +598,8 @@ function init() {
 	canvas.addEventListener("mouseout", workspaceMoveOut);
 	document.getElementById("startStimulate").addEventListener("click", clickStimulateButton);
 	document.getElementById("stopStimulate").addEventListener("click", stopStimulating);
+	document.getElementById("pauseActivity").addEventListener("click", pauseActivity);
+	document.getElementById("resumeActivity").addEventListener("click", resumeActivity);
 	document.getElementById("stepStimulate").addEventListener("click", function() { Cells[0].stimulate(1); });
 	document.getElementById("resetWorkspace").addEventListener("click", resetWorkspace);
 	document.getElementById("clearWorkspace").addEventListener("click", clearWorkspace);
