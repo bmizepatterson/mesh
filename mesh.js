@@ -349,6 +349,16 @@ function setTip(text = '', time = 0) {
 	}
 }
 
+function setupWorkspace() {
+	// Initial setup of the workspace includes one cell and one dendrite
+	var firstCell = addCell(75, 250, 20, 1, 1, false, ctx);
+	// Create the first dendrite, which is a special case: it doesn't have an origin cell
+	// because the first cell is stimulated by clicking the "start" or "step" button.
+	addDendrite(null, firstCell, 0, firstCell.y, firstCell.x-firstCell.r, firstCell.y);
+	updateStatisticsTable();
+  	updateCellInfoTable();
+}
+
 function clearWorkspace() {
 	resetWorkspace();
 	Cells = [];
@@ -647,15 +657,7 @@ function init() {
 	document.getElementById("clearWorkspace").addEventListener("mouseover", function() { setTip('Click "Clear" to delete all neurons.'); });
 	document.getElementById("clearWorkspace").addEventListener("mouseout", function() { setTip(); } );
 
-
-	// Initial setup of the workspace includes one cell and one dendrite
-	var firstCell = addCell(75, 250, 20, 1, 1, false, ctx);
-	// Create the first dendrite, which is a special case: it doesn't have an origin cell
-	// because the first cell is stimulated by clicking the "start" or "step" button.
-	addDendrite(null, firstCell, 0, firstCell.y, firstCell.x-firstCell.r, firstCell.y);
-	updateStatisticsTable();
-  	updateCellInfoTable();
-  	loop();
+	setupWorkspace();	
 };
 
 function loop() {
@@ -665,3 +667,4 @@ function loop() {
 };
 
 init();
+loop();
