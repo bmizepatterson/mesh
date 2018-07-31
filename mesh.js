@@ -25,33 +25,6 @@ var				   canvas = document.querySelector('canvas'),
 				fireCount = 0;
 		 stimulationCount = 0;
 
-function distance(x1, y1, x2, y2) {
-	// Use the distance formula to calculate the distance between two points.
-	return Math.sqrt( Math.pow( (x2-x1), 2 ) + Math.pow( (y2-y1), 2 ) );
-}
-
-function watch() {
-	document.getElementById("stimulateCheck").innerHTML = stimulationInProgress;
-	document.getElementById("currentWedgeAngle").innerHTML = Math.round(Cells[0].currentWedgeAngle / Math.PI * 180 + 90);
-}
-
-function checkForCollision(x,y,radius = 0) {
-	var collision = false;
-	for (var i = 0; i < Cells.length; i++) {
-		if (distance(x, y, Cells[i].x, Cells[i].y) <= Cells[i].r + radius) {
-			// If the distance between the mouse and this cell's center is less than this cell's radius, then we have a collision.
-			collision = Cells[i];
-			break;
-		}
-	}
-	return collision;
-}
-
-function displayTip(text, time = 5000) {
-	document.getElementById("tip").innerHTML = text;
-	setTimeout(function () { document.getElementById("tip").innerHTML = '&nbsp;'; } , time);
-}
-
 // Object constructors
 function Cell(x, y, r, threshold, firePower) {
 	this.x = x;
@@ -346,6 +319,36 @@ function Dendrite(originCell = null, destinationCell, startX, startY, endX, endY
 	}
 }
 
+function distance(x1, y1, x2, y2) {
+	// Use the distance formula to calculate the distance between two points.
+	return Math.sqrt( Math.pow( (x2-x1), 2 ) + Math.pow( (y2-y1), 2 ) );
+}
+
+function watch() {
+	document.getElementById("stimulateCheck").innerHTML = stimulationInProgress;
+	document.getElementById("currentWedgeAngle").innerHTML = Math.round(Cells[0].currentWedgeAngle / Math.PI * 180 + 90);
+}
+
+function checkForCollision(x,y,radius = 0) {
+	var collision = false;
+	for (var i = 0; i < Cells.length; i++) {
+		if (distance(x, y, Cells[i].x, Cells[i].y) <= Cells[i].r + radius) {
+			// If the distance between the mouse and this cell's center is less than this cell's radius, then we have a collision.
+			collision = Cells[i];
+			break;
+		}
+	}
+	return collision;
+}
+
+function setTip(text = '', time = 0) {
+	// Displays a message above the canvas, optionally for a given time.
+	document.getElementById("tip").innerHTML = text;
+	if (time) {
+		window.setTimeout(function () { setTip(); } , time);
+	}
+}
+
 function clearWorkspace() {
 	resetWorkspace();
 	Cells = [];
@@ -383,7 +386,7 @@ function workspaceMouseClick(event) {
 					// If we're clicking on a different (non-selected) cell, then create a dendrite between the selected cell and this cell
 					addDendrite(Cells[selectedCell], collision, Cells[selectedCell].x, Cells[selectedCell].y, collision.x, collision.y);
 				} else {
-					displayTip('You\'ve added the maximum number of connections.', 5000);
+					setTip('You\'ve added the maximum number of connections.', 5000);
 				}
 				// Unselect (but don't highlight) the selected cell
 				Cells[selectedCell].unselect();
@@ -405,7 +408,7 @@ function workspaceMouseClick(event) {
 			if (x > canvasBufferMaximum || x < canvasBufferMinimum
 				|| y > canvasBufferMaximum || y < canvasBufferMinimum
 				|| checkForCollision(x,y,newRadius+interCellBuffer)) {
-				displayTip("There is not enough room to place a cell here.", 5000);
+				setTip("There is not enough room to place a cell here.", 5000);
 			} else {
 				var threshold = parseInt(document.getElementById("thresholdSetting").value);
 				var firepower = parseInt(document.getElementById("firepowerSetting").value);
@@ -443,7 +446,9 @@ function workspaceMoveOut(event) {
 }
 
 function clickStimulateButton() {
+	
 	document.getElementById("stopStimulate").style.display = "block";
+	document.getElementById("stopStimulate").dispatchEvent(new Event('mouseover'));
 	document.getElementById("startStimulate").style.display = "none";
 	document.getElementById("stepStimulate").disabled = true;
 	Cells[0].stimulate(1);
@@ -456,12 +461,14 @@ function stopStimulating() {
 		stimulationInProgress = false;
 		document.getElementById("stopStimulate").style.display = "none";
 		document.getElementById("startStimulate").style.display = "block";
+		document.getElementById("startStimulate").dispatchEvent(new Event('mouseover'));
 		document.getElementById("stepStimulate").disabled = false;
 	}
 }
 
 function pauseActivity() {
 	document.getElementById("resumeActivity").style.display = "block";
+	document.getElementById("resumeActivity").dispatchEvent(new Event('mouseover'));
 	document.getElementById("pauseActivity").style.display = "none";
 	for (let i = 0; i < Cells.length; i++) {
 		Cells[i].locked = true;
@@ -471,6 +478,7 @@ function pauseActivity() {
 function resumeActivity() {
 	document.getElementById("resumeActivity").style.display = "none";
 	document.getElementById("pauseActivity").style.display = "block";
+	document.getElementById("pauseActivity").dispatchEvent(new Event('mouseover'));
 	for (let i = 0; i < Cells.length; i++) {
 		Cells[i].locked = false;
 	}
@@ -607,6 +615,23 @@ function init() {
 	document.getElementById("thresholdSetting").addEventListener("mousemove", updateThresholdValue);
 	document.getElementById("firepowerSetting").addEventListener("change", updateFirepowerValue);
 	document.getElementById("firepowerSetting").addEventListener("mousemove", updateFirepowerValue);
+
+	// Tips
+	document.getElementById("startStimulate").addEventListener("mouseover", function() { setTip('Click "Start" to start automatically stimulating the first cell once per second.'); });
+	document.getElementById("startStimulate").addEventListener("mouseout", function() { setTip(); } );
+	document.getElementById("stopStimulate").addEventListener("mouseover", function() { setTip('Click "Stop" to stop automatically stimulating the first cell once per second.'); });
+	document.getElementById("stopStimulate").addEventListener("mouseout", function() { setTip(); } );
+	document.getElementById("stepStimulate").addEventListener("mouseover", function() { setTip('Click "Step" to stimulate the first cell just once.'); });
+	document.getElementById("stepStimulate").addEventListener("mouseout", function() { setTip(); } );
+	document.getElementById("pauseActivity").addEventListener("mouseover", function() { setTip('Click "Pause" to halt all neuron activity.'); });
+	document.getElementById("pauseActivity").addEventListener("mouseout", function() { setTip(); } );
+	document.getElementById("resumeActivity").addEventListener("mouseover", function() { setTip('Click "Resume" to resume neuron activity.'); });
+	document.getElementById("resumeActivity").addEventListener("mouseout", function() { setTip(); } );
+	document.getElementById("resetWorkspace").addEventListener("mouseover", function() { setTip('Click "Reset" to reset the neurons and Mesh statistics.'); });
+	document.getElementById("resetWorkspace").addEventListener("mouseout", function() { setTip(); } );
+	document.getElementById("clearWorkspace").addEventListener("mouseover", function() { setTip('Click "Clear" to delete all neurons.'); });
+	document.getElementById("clearWorkspace").addEventListener("mouseout", function() { setTip(); } );
+
 
 	// Initial setup of the workspace includes one cell and one dendrite
 	var firstCell = addCell(75, 250, 20, 1, 1, false, ctx);
