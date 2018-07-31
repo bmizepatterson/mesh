@@ -1,0 +1,36 @@
+h1 {
+	margin-bottom:0;
+	margin-top:16px;
+	line-height: initial;
+}
+i {
+	font-size:12px!important;
+	margin-right:2px;
+}
+button {
+	font-size:13px;
+}
+.w3-table.compact td {
+	padding-top:4px;
+	padding-bottom:4px;
+}
+#meshIcon {
+	margin-top:16px;
+	margin-right:4px;
+	float:left;
+}
+#tip {
+	font-style:italic;
+	margin:0;
+}
+#cellInfo {
+	margin:0;
+}
+#cellInfoTable {
+	margin-top:20px;
+	margin-bottom:20px;
+	cursor: default;
+}
+#watchlist p {
+	margin:0;
+}
