@@ -24,6 +24,7 @@ var				   canvas = document.getElementById('workspace'),
 			   curveWidth = 30,
 				fireCount = 0;
 		 stimulationCount = 0;
+		 		firingNow = 0;
 
 // Object constructors
 function Cell(x, y, r, threshold, firePower) {
@@ -93,12 +94,14 @@ function Cell(x, y, r, threshold, firePower) {
 		// Complete the wedge-circle, stimulate children, and reset after a refactory period
 		this.firing = true;
 		fireCount++;
+		firingNow++;
 		updateStatisticsTable();
 
 		var parentCell = this;
 		var fn = function () {
 			parentCell.potential = 0;
 			parentCell.firing = false;
+			firingNow--;
 			if (parentCell.outputDendrites.length > 0) {
 				var power = parentCell.firePower;
 				for (let i = 0; i < parentCell.outputDendrites.length; i++) {
@@ -360,7 +363,7 @@ function clearWorkspace() {
 	resetWorkspace();
 	Cells = [];
 	Dendrites = [];
-	init();
+	setupWorkspace();
 }
 
 function resetWorkspace() {
@@ -370,7 +373,7 @@ function resetWorkspace() {
 	for (let i = 0; i < Cells.length; i++) {
 		Cells[i].reset();
 	}
-	fireCount = stimulationCount = 0;
+	fireCount = stimulationCount = firingNow = 0;
 	document.getElementById("tip").innerHTML = '';
 	updateCellInfoTable();
 	updateStatisticsTable();
@@ -452,8 +455,7 @@ function workspaceMoveOut(event) {
 	}
 }
 
-function clickStimulateButton() {
-	
+function clickStimulateButton() {	
 	document.getElementById("stopStimulate").style.display = "block";
 	document.getElementById("stopStimulate").dispatchEvent(new Event('mouseover'));
 	document.getElementById("startStimulate").style.display = "none";
@@ -585,6 +587,7 @@ function updateStatisticsTable() {
 	document.getElementById("totalDendrites").innerHTML = Dendrites.length;
 	document.getElementById("totalFires").innerHTML = fireCount;
 	document.getElementById("totalStimulations").innerHTML = stimulationCount;
+	document.getElementById("firingNow").innerHTML = firingNow;
 }
 
 
