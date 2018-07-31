@@ -1,4 +1,4 @@
-var				   canvas = document.querySelector('canvas'),
+var				   canvas = document.getElementById('workspace'),
 					  ctx = canvas.getContext("2d"),
 	stimulationInProgress = false,	// False or the timer ID of the stimulation in progress
 		  drawingDendrite = false,
@@ -600,6 +600,21 @@ function draw() {
 function init() {
 	canvas.width = 500;
 	canvas.height = 500;
+
+	// Draw the Mesh icon
+	var iconctx = document.getElementById("meshIcon").getContext('2d');
+	iconctx.beginPath();
+	iconctx.fillStyle = selectColor;
+	iconctx.arc(20,20,20,0,2*Math.PI);
+	iconctx.fill();
+	iconctx.closePath();
+	iconctx.beginPath();
+	iconctx.fillStyle = backgroundColor;
+	iconctx.moveTo(20,20);
+	iconctx.arc(20,20,15,-Math.PI/2,2*Math.PI/3);
+	iconctx.fill();
+	iconctx.closePath();
+	
 	// Add event listeners
 	canvas.addEventListener("click", workspaceMouseClick);
 	canvas.addEventListener("mousemove", workspaceMove);
