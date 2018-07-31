@@ -15,6 +15,13 @@
 			right: 10px;
 			display:none;
 		}
+		#watchlist {
+			position:fixed;
+			bottom: 10px;
+			right: 20px;
+			width: 200px;
+			background-color: #fff;
+		}
 		.contextMenuButton {
 			padding: 8px 8px 4px 8px;
 		}
@@ -26,7 +33,12 @@
 	<title>Mesh</title>
 </head>
 <body>
-	
+	<div id="watchlist" class="w3-tiny w3-border w3-container w3-card">
+		<p>Cells[0].currentWedgeAngle = <span id="currentWedgeAngle"></span></p>
+		<p>Mouse: <span id="mousecoords"></span></p>
+		<p>Stimulation in progress: <span id="stimulateCheck"></span></p>
+		<p>Control Point: <span id="controlPoint"></span></p>
+	</div>	
 	<div class="w3-container">
 		<canvas id="meshIcon" width="40" height="40"></canvas>
 		<h1>Mesh</h1>
@@ -53,13 +65,6 @@
 			</div>
 				
 			<p id="cellInfo" class="w3-small w3-right-align w3-text-gray" style="height:20px;">&nbsp;</p>
-
-			<div id="watchlist" class="w3-tiny w3-border w3-container" style="margin-bottom:20px;">
-				<p>Cells[0].currentWedgeAngle = <span id="currentWedgeAngle"></span></p>
-				<p>Mouse: <span id="mousecoords"></span></p>
-				<p>Stimulation in progress: <span id="stimulateCheck"></span></p>
-				<p>Control Point: <span id="controlPoint"></span></p>
-			</div>
 		</div>
 
 		<div class="w3-rest w3-mobile">
