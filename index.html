@@ -8,28 +8,6 @@
 	<link rel="stylesheet" type="text/css" href="https://www.w3schools.com/w3css/4/w3.css">
 	<link rel="stylesheet" type="text/css" href="mesh.css">
 	<link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">	
-	<style>
-		#contextMenu {
-			position:absolute;
-			top: 10px;
-			right: 10px;
-			display:none;
-		}
-		#watchlist {
-			position:fixed;
-			bottom: 10px;
-			right: 20px;
-			width: 200px;
-			background-color: #fff;
-		}
-		.contextMenuButton {
-			padding: 8px 8px 4px 8px;
-		}
-		.contextMenuButton i {
-			font-size:24px!important;
-			margin: 0;
-		}
-	</style>
 	<title>Mesh</title>
 </head>
 <body>
@@ -46,8 +24,8 @@
 		<p>Click anywhere in the box to add a neuron. Click on a neuron to select it. Then click on another to connect the two. Click "Start" or "Step" to provide input to the first neuron and see how it propogates through the network!</p>
 	</div>	
 	<div class="w3-row">			
-		<div class="w3-col w3-container w3-mobile" style="width:534px;">
-			<p id="tip" class="w3-text-indigo w3-center w3-small" style="height:20px;">&nbsp;</p>
+		<div class="w3-col w3-container w3-mobile" style="max-width:534px;margin-left:auto;margin-right:auto;">
+			<p id="tip" class="w3-text-indigo w3-center w3-small">&nbsp;</p>
 			<div class="w3-border" style="position:relative;">
 
 				<div id="contextMenu"><button id="deleteCell" class="w3-btn w3-dark-gray contextMenuButton"><i class="material-icons">delete_forever</i></button></div>
@@ -64,7 +42,7 @@
 				</div>
 			</div>
 				
-			<p id="cellInfo" class="w3-small w3-right-align w3-text-gray" style="height:20px;">&nbsp;</p>
+			<p id="cellInfo" class="w3-small w3-right-align w3-text-gray">&nbsp;</p>
 		</div>
 
 		<div class="w3-rest w3-mobile">
