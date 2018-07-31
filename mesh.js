@@ -7,7 +7,7 @@ var				   canvas = document.getElementById('workspace'),
 					Cells = [],
 				Dendrites = [],
 				   Pulses = [],
-			dendriteLimit = 20,
+			dendriteLimit = 30,
 			   arrowWidth = 10,
 			   arrowAngle = Math.PI*0.15, // Must be in radians
 		   highlightWidth = 2,
@@ -45,7 +45,6 @@ function Cell(x, y, r, threshold, firePower) {
 	this.draw = function() {
 		var lineColor = this.selected ? selectColor : cellColor;
 		var fillColor = this.selected ? selectColor : backgroundColor;
-
 		ctx.beginPath();
 		ctx.arc(this.x,this.y,this.r,0,2*Math.PI);
 		ctx.fillStyle = fillColor;
@@ -54,7 +53,6 @@ function Cell(x, y, r, threshold, firePower) {
 		ctx.lineWidth = 1;
 		ctx.stroke();
 		ctx.closePath();
-
 		if (this.highlighted) {
 			ctx.beginPath();
 			ctx.strokeStyle = highlightColor;
@@ -63,7 +61,6 @@ function Cell(x, y, r, threshold, firePower) {
 			ctx.stroke();
 			ctx.closePath();
 		}
-
 		if (this.firing) {
 			ctx.beginPath();
 			ctx.fillStyle = '#ffc107';
@@ -480,6 +477,8 @@ function pauseActivity() {
 	document.getElementById("resumeActivity").style.display = "block";
 	document.getElementById("resumeActivity").dispatchEvent(new Event('mouseover'));
 	document.getElementById("pauseActivity").style.display = "none";
+	document.getElementById("stopStimulate").disabled = true;
+	document.getElementById("startStimulate").disabled = true;
 	for (let i = 0; i < Cells.length; i++) {
 		Cells[i].locked = true;
 	}
@@ -489,6 +488,8 @@ function resumeActivity() {
 	document.getElementById("resumeActivity").style.display = "none";
 	document.getElementById("pauseActivity").style.display = "block";
 	document.getElementById("pauseActivity").dispatchEvent(new Event('mouseover'));
+	document.getElementById("stopStimulate").disabled = false;
+	document.getElementById("startStimulate").disabled = false;
 	for (let i = 0; i < Cells.length; i++) {
 		Cells[i].locked = false;
 	}
@@ -586,14 +587,6 @@ function updateStatisticsTable() {
 	document.getElementById("totalStimulations").innerHTML = stimulationCount;
 }
 
-window.requestAnimFrame = (function(){
-  return  window.requestAnimationFrame       ||
-          window.webkitRequestAnimationFrame ||
-          window.mozRequestAnimationFrame    ||
-          function( callback ) {
-            window.setTimeout(callback, 1000 / 60);
-          };
-})();
 
 function draw() {
 	ctx.clearRect(0, 0, 500, 500);
@@ -659,6 +652,15 @@ function init() {
 
 	setupWorkspace();	
 };
+
+window.requestAnimFrame = (function(){
+  return  window.requestAnimationFrame       ||
+          window.webkitRequestAnimationFrame ||
+          window.mozRequestAnimationFrame    ||
+          function( callback ) {
+            window.setTimeout(callback, 1000 / 60);
+          };
+})();
 
 function loop() {
   watch();
