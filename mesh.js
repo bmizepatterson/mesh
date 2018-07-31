@@ -6,7 +6,6 @@ var				   canvas = document.getElementById('workspace'),
 			 selectedCell = -1,
 					Cells = [],
 				Dendrites = [],
-				   Pulses = [],
 			dendriteLimit = 30,
 			   arrowWidth = 10,
 			   arrowAngle = Math.PI*0.15, // Must be in radians
@@ -43,6 +42,7 @@ function Cell(x, y, r, threshold, firePower, refactoryPeriod) {
 	this.refactoryPeriod = refactoryPeriod;
 	this.currentWedgeAngle = -Math.PI/2;
 	this.locked = false;		// If the cell is locked, then it can't be stimulated.
+	this.deleted = false;
 
 	this.draw = function() {
 		var lineColor = this.selected ? selectColor : cellColor;
@@ -106,6 +106,7 @@ function Cell(x, y, r, threshold, firePower, refactoryPeriod) {
 			if (parentCell.outputDendrites.length > 0) {
 				var power = parentCell.firePower;
 				for (let i = 0; i < parentCell.outputDendrites.length; i++) {
+					if (parentCell.outputDendrites[i].deleted) continue;
 					// Delay for a time proportional to the length of the dendrite
 					let childCell = parentCell.outputDendrites[i].destinationCell;
 					let delay = parentCell.outputDendrites[i].length;
@@ -155,6 +156,7 @@ function Cell(x, y, r, threshold, firePower, refactoryPeriod) {
 	this.select = function () {
 		// Unselect all other cells
 		for (let i = 0; i < Cells.length; i++) {
+			if (Cells[i].deleted) continue;
 			Cells[i].unselect();
 		}
 		// Set selected flags
@@ -165,6 +167,11 @@ function Cell(x, y, r, threshold, firePower, refactoryPeriod) {
 		for (let i = 0; i < row.children.length; i++) {
 			row.children[i].style.color = backgroundColor;
 			row.children[i].style.backgroundColor = selectColor;
+		}
+		if (this.id !== 0) {
+			// Don't show the delete button for the first cell
+			document.getElementById("contextMenu").style.display="block";
+			document.getElementById("contextMenu").classList.add('w3-animate-opacity');
 		}
 	}
 
@@ -178,6 +185,7 @@ function Cell(x, y, r, threshold, firePower, refactoryPeriod) {
 			row.children[i].style.color = 'initial';
 			row.children[i].style.backgroundColor = 'initial';
 		}
+		document.getElementById("contextMenu").style.display="none";
 	}
 
 	this.stimulate = function(power) {
@@ -202,6 +210,19 @@ function Cell(x, y, r, threshold, firePower, refactoryPeriod) {
 		var cell = this;
 		window.setTimeout(function() { cell.locked = false; }, 1000);
 	}
+
+	this.delete = function() {
+		this.deleted = true;
+		// Delete all input/output dendrites
+		for (var i = 0; i < this.inputDendrites.length; i++) {
+			this.inputDendrites[i].delete();
+		}
+		for (var i = 0; i < this.outputDendrites.length; i++) {
+			this.outputDendrites[i].delete();
+		}
+		updateStatisticsTable();
+		updateCellInfoTable();
+	}
 }
 
 function Dendrite(originCell = null, destinationCell, startX, startY, endX, endY) {
@@ -218,6 +239,7 @@ function Dendrite(originCell = null, destinationCell, startX, startY, endX, endY
 	this.controlPoint = null;
 	this.color = dendriteColor;
 	this.lineWidth = 0.5;
+	this.deleted = false;
 
 	this.getArrowCoords = function() {
 		// Calculate (if needed) the coordinates for each side of the arrow
@@ -277,7 +299,7 @@ function Dendrite(originCell = null, destinationCell, startX, startY, endX, endY
 		return this.controlPoint;
 	}
 
-	this.draw = function(ignoreLoop = false) {
+	this.draw = function() {
 	    ctx.beginPath();
 	    ctx.strokeStyle = this.color;
 	    ctx.lineWidth = this.lineWidth;
@@ -286,16 +308,15 @@ function Dendrite(originCell = null, destinationCell, startX, startY, endX, endY
 		// Iterate through the origin cell's input dendrites and see if any come from the current destination cell
 		if (this.originCell != null) {
 			for (let i = 0; i < this.originCell.inputDendrites.length; i++) {
-				if (this.originCell.inputDendrites[i].originCell == null) {
-					continue;
-				}
+				if (this.originCell.inputDendrites[i].originCell == null) continue;
+				if (this.originCell.inputDendrites[i].originCell.deleted) continue;
 				if (this.originCell.inputDendrites[i].originCell.id === this.destinationCell.id) {
 					loop = true;
 					break;
 				}
 			}
 		}	
-		if (loop && !ignoreLoop && this.getControlPoint()) {
+		if (loop && this.getControlPoint()) {
 			ctx.beginPath();
 			ctx.moveTo(this.startX, this.startY);
 			ctx.quadraticCurveTo(this.controlPoint[0], this.controlPoint[1], this.endX, this.endY);
@@ -318,6 +339,44 @@ function Dendrite(originCell = null, destinationCell, startX, startY, endX, endY
 		    }
 		}
 	}
+
+	this.delete = function() {
+		this.deleted = true;
+	}
+}
+
+function countCells(includeDeleted = false) {
+	if (includeDeleted) {
+		return Cells.length;
+	} else {
+		var count = 0;
+		for (let i = 0; i < Cells.length; i++) {
+			if (!Cells[i].deleted) {
+				count++;
+			}
+		}
+		return count;
+	}
+}
+
+function countDendrites(DendriteArray = null, includeDeleted = false) {
+	var tempArray;
+	if (DendriteArray == null) {
+		tempArray = Dendrites;
+	} else {
+		tempArray = DendriteArray;
+	}
+	if (includeDeleted) {
+		return tempArray.length;
+	} else {
+		var count = 0;
+		for (let i = 0; i < tempArray.length; i++) {
+			if (!tempArray[i].deleted) {
+				count++;
+			}
+		}
+		return count;
+	}
 }
 
 function distance(x1, y1, x2, y2) {
@@ -333,6 +392,7 @@ function watch() {
 function checkForCollision(x,y,radius = 0) {
 	var collision = false;
 	for (var i = 0; i < Cells.length; i++) {
+		if (Cells[i].deleted) continue;
 		if (distance(x, y, Cells[i].x, Cells[i].y) <= Cells[i].r + radius) {
 			// If the distance between the mouse and this cell's center is less than this cell's radius, then we have a collision.
 			collision = Cells[i];
@@ -372,6 +432,7 @@ function resetWorkspace() {
 	stopStimulating();
 	// Halt all ongoing wedge animations and reset all cell potentials to zero
 	for (let i = 0; i < Cells.length; i++) {
+		if (Cells[i].deleted) continue;
 		Cells[i].reset();
 	}
 	fireCount = stimulationCount = firingNow = 0;
@@ -381,8 +442,8 @@ function resetWorkspace() {
 }
 
 function workspaceMouseClick(event) {
-	var x = event.clientX - canvas.offsetLeft + window.pageXOffset;
-	var y = event.clientY - canvas.offsetTop + window.pageYOffset;
+	var x = event.clientX - canvas.parentElement.offsetLeft + window.pageXOffset;
+	var y = event.clientY - canvas.parentElement.offsetTop + window.pageYOffset;
 	// Are we clicking on a cell body?
 	var collision = checkForCollision(x,y);
 
@@ -393,7 +454,7 @@ function workspaceMouseClick(event) {
 				collision.unselect();
 				collision.highlight();
 			} else {
-				if (Dendrites.length < dendriteLimit) {
+				if (countDendrites() < dendriteLimit) {
 					// If we're clicking on a different (non-selected) cell, then create a dendrite between the selected cell and this cell
 					addDendrite(Cells[selectedCell], collision, Cells[selectedCell].x, Cells[selectedCell].y, collision.x, collision.y);
 				} else {
@@ -432,8 +493,9 @@ function workspaceMouseClick(event) {
 
 function workspaceMove(event) {
 	// Show the mouse coordinates within the canvas for reference
-	var x = event.clientX - canvas.offsetLeft + window.pageXOffset;
-    var y = event.clientY - canvas.offsetTop + window.pageYOffset;
+	var x = event.clientX - canvas.parentElement.offsetLeft + window.pageXOffset;
+    var y = event.clientY - canvas.parentElement.offsetTop + window.pageYOffset;
+    // document.getElementById("mousecoords").innerHTML = "(" + event.clientX + "-" + canvas.offsetLeft + "+" + window.pageXOffset + "=" + x + ", " + event.clientY + "-" + canvas.offsetTop + "+" + window.pageYOffset + "=" + y + ")";
     document.getElementById("mousecoords").innerHTML = "(" + x + ", " + y + ")";
 	// Check for collision with a cell body. 
 	var collision = checkForCollision(x,y);
@@ -545,6 +607,16 @@ function addCell(newCellX, newCellY, newRadius, newThreshold, newFirePower, refa
 	}
 	return newCell;
 }
+
+function deleteCell() {
+	// Delete the currently selected cell (unless it's the first cell)
+	if (selectedCell !== 0) {
+		var cell = Cells[selectedCell];
+		cell.unselect();
+		cell.delete();
+		document.getElementById("contextMenu").style.display = "none";
+	}
+}
  
 function updateCellInfoTable(cellid = null, property = null, value = null) {
 	var tbody = document.getElementById("cellInfoTable").getElementsByTagName('tbody')[0];
@@ -554,14 +626,17 @@ function updateCellInfoTable(cellid = null, property = null, value = null) {
 		for (var j = 0; j < rowCount; j++) {
 			tbody.deleteRow(0);	// Careful. Must pass 0 for each loop, because as one row is deleted, the others move up.
 		}
+		var rowCounter = 0;
 		for (let i = 0; i < Cells.length; i++) {
 			let cell = Cells[i];
-			let row = tbody.insertRow(i);
-			row.id = "cellRow"+i;
+			if (cell.deleted) continue;
+			let row = tbody.insertRow(rowCounter);
+			rowCounter++;
+			row.id = "cellRow"+cell.id;
 			row.addEventListener('mouseover', function() { cell.highlight(); });
 			row.addEventListener('mouseout', function() { cell.unhighlight(); });
 			row.addEventListener('click', function() { cell.toggleSelect(); });
-			row.insertCell(0).innerHTML = cell.id+1;
+			row.insertCell(0).innerHTML = rowCounter;
 			row.insertCell(1).innerHTML = "("+cell.x+", "+cell.y+")";
 			row.insertCell(2).innerHTML = cell.potential;
 			row.insertCell(3).innerHTML = cell.threshold;
@@ -589,8 +664,8 @@ function updateCellInfoTable(cellid = null, property = null, value = null) {
 }
 
 function updateStatisticsTable() {
-	document.getElementById("totalCells").innerHTML = Cells.length;
-	document.getElementById("totalDendrites").innerHTML = Dendrites.length;
+	document.getElementById("totalCells").innerHTML = countCells();
+	document.getElementById("totalDendrites").innerHTML = countDendrites();
 	document.getElementById("totalFires").innerHTML = fireCount;
 	document.getElementById("totalStimulations").innerHTML = stimulationCount;
 	document.getElementById("firingNow").innerHTML = firingNow;
@@ -617,10 +692,12 @@ function draw() {
 	ctx.clearRect(0, 0, 500, 500);
 	// Draw all dendrites
 	for (let d = 0; d < Dendrites.length; d++) {
+		if (Dendrites[d].deleted) continue;
 		Dendrites[d].draw();
 	}
 	// Draw all cells
 	for (let c = 0; c < Cells.length; c++) {
+		if (Cells[c].deleted) continue;
 		Cells[c].draw();
 	}
 	drawIcon();
@@ -643,6 +720,7 @@ function init() {
 	document.getElementById("stepStimulate").addEventListener("click", function() { Cells[0].stimulate(1); });
 	document.getElementById("resetWorkspace").addEventListener("click", resetWorkspace);
 	document.getElementById("clearWorkspace").addEventListener("click", clearWorkspace);
+	document.getElementById("deleteCell").addEventListener("click", deleteCell);
 	document.getElementById("thresholdSetting").addEventListener("change", updateThresholdValue);
 	document.getElementById("thresholdSetting").addEventListener("mousemove", updateThresholdValue);
 	document.getElementById("firepowerSetting").addEventListener("change", updateFirepowerValue);
