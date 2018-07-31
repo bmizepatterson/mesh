@@ -3,6 +3,7 @@ var				   canvas = document.getElementById('workspace'),
 	stimulationInProgress = false,	// False or the timer ID of the stimulation in progress
 		  drawingDendrite = false,
 		  highlightedCell = -1,
+	  highlightedDendrite = -1,
 			 selectedCell = -1,
 					Cells = [],
 				Dendrites = [],
@@ -121,8 +122,13 @@ function Cell(x, y, r, threshold, firePower, refactoryPeriod) {
 	this.highlight = function () {
 		highlightedCell = this.id;
 		this.highlighted = true;
+		// Highlight all output dendrites as well
+		for (let i = 0; i < this.outputDendrites.length; i++) {
+			if (this.outputDendrites[i].deleted) continue;
+			this.outputDendrites[i].highlight();
+		}
 		document.getElementById("cellInfo").innerHTML = "Current Potential: " + this.potential + "; Threshold: " + this.threshold + "; Power: "+this.firePower;
-		// document.getElementById('cellRow'+this.id).style.border = highlightWidth+'px solid '+highlightColor;
+		// Highlight this cell's row in the cell info table
 		var row = document.getElementById('cellRow'+this.id);
 		var borderStyle = '1px solid '+highlightColor;
 		for (let i = 0; i < row.children.length; i++) {
@@ -138,6 +144,12 @@ function Cell(x, y, r, threshold, firePower, refactoryPeriod) {
 	this.unhighlight = function () {
 		highlightedCell = -1;
 		this.highlighted = false;
+		// Unhighlight all output dendrites as well
+		for (let i = 0; i < this.outputDendrites.length; i++) {
+			if (this.outputDendrites[i].deleted) continue;
+			this.outputDendrites[i].unhighlight();
+		}
+		// Unhighlight this cell's row in the cell info table
 		document.getElementById("cellInfo").innerHTML = "";
 		var row = document.getElementById('cellRow'+this.id);
 		for (let i = 0; i < row.children.length; i++) {
@@ -237,9 +249,8 @@ function Dendrite(originCell = null, destinationCell, startX, startY, endX, endY
 	this.midpointY = (startY + endY) / 2;
 	this.arrowCoords = null;
 	this.controlPoint = null;
-	this.color = dendriteColor;
-	this.lineWidth = 0.5;
 	this.deleted = false;
+	this.highlighted = false;
 
 	this.getArrowCoords = function() {
 		// Calculate (if needed) the coordinates for each side of the arrow
@@ -301,8 +312,8 @@ function Dendrite(originCell = null, destinationCell, startX, startY, endX, endY
 
 	this.draw = function() {
 	    ctx.beginPath();
-	    ctx.strokeStyle = this.color;
-	    ctx.lineWidth = this.lineWidth;
+	    ctx.strokeStyle = this.highlighted ? selectColor : dendriteColor;
+	    ctx.lineWidth = this.highlighted ? 1 : 0.5;
 		// If this dendrite creates a feedback loop with another cell, then curve the dendrite lines
 		var loop = false;
 		// Iterate through the origin cell's input dendrites and see if any come from the current destination cell
@@ -342,6 +353,16 @@ function Dendrite(originCell = null, destinationCell, startX, startY, endX, endY
 
 	this.delete = function() {
 		this.deleted = true;
+	}
+
+	this.highlight = function() {
+		this.highlighted = true;
+		highlightedDendrite = this.id;
+	}
+
+	this.unhighlight = function() {
+		this.highlighted = false;
+		highlightedDendrite = -1;
 	}
 }
 
