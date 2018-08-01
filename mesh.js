@@ -832,7 +832,6 @@ function updateStatisticsTable() {
 	document.getElementById("totalDendrites").innerHTML = countDendrites();
 	document.getElementById("totalFires").innerHTML = fireCount;
 	document.getElementById("totalStimulations").innerHTML = stimulationCount;
-	document.getElementById("firingNow").innerHTML = firingCellCount;
 	document.getElementById("meshActivity").innerHTML = Math.round(activeCellCount / countCells() * 100) + '%';
 }
 
