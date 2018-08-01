@@ -152,9 +152,11 @@ function Cell(x, y, r, threshold, firePower, refactoryPeriod) {
 		highlightedCell = -1;
 		this.highlighted = false;
 		// Unhighlight all output dendrites as well
-		for (let i = 0; i < this.outputDendrites.length; i++) {
-			if (this.outputDendrites[i].deleted) continue;
-			this.outputDendrites[i].unhighlight();
+		if (!this.selected) {
+			for (let i = 0; i < this.outputDendrites.length; i++) {
+				if (this.outputDendrites[i].deleted) continue;
+				this.outputDendrites[i].unhighlight();
+			}
 		}
 		// Unhighlight this cell's row in the cell info table
 		document.getElementById("cellInfo").innerHTML = "";
@@ -182,6 +184,11 @@ function Cell(x, y, r, threshold, firePower, refactoryPeriod) {
 		selectedCell = this.id;
 		this.selected = true;
 		drawingDendrite = true;
+		// Highlight all output dendrites as well
+		for (let i = 0; i < this.outputDendrites.length; i++) {
+			if (this.outputDendrites[i].deleted) continue;
+			this.outputDendrites[i].highlight();
+		}
 		var row = document.getElementById('cellRow'+this.id);
 		for (let i = 0; i < row.children.length; i++) {
 			row.children[i].style.color = backgroundColor;
@@ -199,6 +206,11 @@ function Cell(x, y, r, threshold, firePower, refactoryPeriod) {
 		selectedCell = -1;
 		this.selected = false;
 		drawingDendrite = false;
+		// Unhighlight all output dendrites as well
+		for (let i = 0; i < this.outputDendrites.length; i++) {
+			if (this.outputDendrites[i].deleted) continue;
+			this.outputDendrites[i].unhighlight();
+		}
 		var row = document.getElementById('cellRow'+this.id);
 		for (let i = 0; i < row.children.length; i++) {
 			row.children[i].style.color = 'initial';
@@ -316,15 +328,24 @@ function Dendrite(originCell = null, destinationCell, startX, startY, endX, endY
 		// Uses global curveWidth variable
 		// Returns the coordinates in an array [x, y].
 		if (this.controlPoint == null) {
-			var x, y;
-			if (this.startY < this.endY) {
+			var x, y, startX;
+			// The formulas below only work when the dendrite line is not vertical (startX and midpointX are the same);
+			// So cheat. If it's vertical then pretend that startX is 1 pixel to the left.
+			// startX = (this.startX == this.endX) ? this.startX-1 : this.startX;
+			if (this.startX === this.endY) {
+				if (this.startY < this.endY) {
+					x = this.startX + curveWidth;
+				} else {
+					x = this.startX - curveWidth;
+				}
+				y = this.midpointY;
+			} else if (this.startY < this.endY) {
 				x = Math.round(this.midpointX + (curveWidth * Math.sin(Math.PI/2 - Math.asin(2*(this.startX-this.midpointX)/this.length))));
 				y = Math.round(this.midpointY + (curveWidth * Math.cos(Math.PI/2 - Math.asin(2*(this.startX-this.midpointX)/this.length))));
 			} else {
 				x = Math.round(this.midpointX - (curveWidth * Math.sin(Math.PI/2 - Math.asin(2*(this.startX-this.midpointX)/this.length))));
 				y = Math.round(this.midpointY + (curveWidth * Math.cos(Math.PI/2 - Math.asin(2*(this.startX-this.midpointX)/this.length))));
-			}
-			document.getElementById("controlPoint").innerHTML = '(' + x + ', ' + y + ')';
+			}			
 			this.controlPoint = [x, y];
 		}
 		return this.controlPoint;
@@ -337,22 +358,51 @@ function Dendrite(originCell = null, destinationCell, startX, startY, endX, endY
 			// Define vertices of triangle ABC with circumcenter P
 			var Ax, Ay, Bx, By, Cx, Cy, Px, Py, Pr;
 			var Ax2, Ay2, Bx2, By2, Cx2, Cy2;	// i.e. 'Ax squared', etc. For making the formula more readable. Hopefully.
-
+			var startAngle, endAngle;
 			Ax = this.startX; Ay = this.startY;
 			Bx = this.endX; By = this.endY;
 			Cx = this.getControlPoint()[0]; Cy = this.getControlPoint()[1];
 			Ax2 = Ax*Ax; Ay2 = Ay*Ay; Bx2 = Bx*Bx; By2 = By*By; Cx2 = Cx*Cx; Cy2 = Cy*Cy;
 
-			Py = ( ( (Bx-Ax) * (Cx2+Cy2-Bx2-By2) ) - ( (Cx-Bx) * (Bx2+By2-Ax2-Ay2) ) ) / ( (2 * (Cy-By) * (Bx-Ax) ) - (2 * (By-Ay) * (Cx-Bx) ) );
-			Px = ( (Bx2+By2-Ax2-Ay2) - (2 * Py * (By-Ay) ) ) / ( 2 * (Bx-Ax) );
-			Pr = distance(Px, Py, Ax, Ay);
+			if (Ax === Bx) {
+				// We've got a vertical line. The formula for calculating Px returns undefined when Ax==Bx, since 2(Bx-Ax) is the denominator.
+				// So rotate the entire triangle ABC by 90 degrees on the midpoint, so we're not working with a vertical line anymore.
+				oldAx = Ax; oldAy = Ay; oldBx = Bx; oldBy = By;
+				var newStartPoint = rotate(this.startX, this.startY, this.midpointX, this.midpointY, Math.PI/2);
+				var newEndPoint = rotate(this.endX, this.endY, this.midpointX, this.midpointY, Math.PI/2);
+				var newControlPoint = rotate(Cx, Cy, this.midpointX, this.midpointY, Math.PI/2);
+				Ax = newStartPoint[0]; Ay = newStartPoint[1]; Ax2 = Ax*Ax; Ay2 = Ay*Ay;
+				Bx = newEndPoint[0]; By = newEndPoint[1]; Bx2 = Bx*Bx; By2 = By*By;
+				Cx = newControlPoint[0]; Cy = newControlPoint[1]; Cx2 = Cx*Cx; Cy2 = Cy*Cy;
+
+				Py = ( ( (Bx-Ax) * (Cx2+Cy2-Bx2-By2) ) - ( (Cx-Bx) * (Bx2+By2-Ax2-Ay2) ) ) / ( (2 * (Cy-By) * (Bx-Ax) ) - (2 * (By-Ay) * (Cx-Bx) ) );
+				Px = ( (Bx2+By2-Ax2-Ay2) - (2 * Py * (By-Ay) ) ) / ( 2 * (Bx-Ax) );
+
+				// Rotate everything back -90 degrees.
+				Ax = oldAx; Ay = oldAy; Bx = oldBx; By = oldBy;
+				var P = rotate(Px, Py, this.midpointX, this.midpointY, -Math.PI/2);
+				Px = P[0]; Py = P[1];
+			} else {
+				// Calculate the coordinates of the center point P of the arc
+				Py = ( ( (Bx-Ax) * (Cx2+Cy2-Bx2-By2) ) - ( (Cx-Bx) * (Bx2+By2-Ax2-Ay2) ) ) / ( (2 * (Cy-By) * (Bx-Ax) ) - (2 * (By-Ay) * (Cx-Bx) ) );
+				Px = ( (Bx2+By2-Ax2-Ay2) - (2 * Py * (By-Ay) ) ) / ( 2 * (Bx-Ax) );
+			}
+
+			Pr = Math.round(distance(Px, Py, Ax, Ay));
 			Py = Math.round(Py);
 			Px = Math.round(Px);
-			Pr = Math.round(Pr);
-			document.getElementById("arcCenter").innerHTML = '(' + Px + ', ' + Py + ', ' + Pr + ')';
-			this.arc = [Px, Py, Pr];
+			startAngle = Math.atan2(Ay - Py, Ax - Px);
+			endAngle = Math.atan2(By - Py, Bx - Px);
+
+			this.arc = [Px, Py, Pr, startAngle, endAngle];
 		}
 		return this.arc;
+	}
+
+	this.rotate = function(x, y, cx, cy, angle) {
+		var newX = Math.cos(angle) * (x - cx) - Math.sin(angle) * (y - cy) + cx;
+		var newY = Math.sin(angle) * (x - cx) + Math.cos(angle) * (y - cy) + cy;
+		return [newX, newY];
 	}
 
 	this.draw = function() {
@@ -375,11 +425,10 @@ function Dendrite(originCell = null, destinationCell, startX, startY, endX, endY
 		if (loop) {
 			this.getArc();
 			ctx.beginPath();
-			// ctx.moveTo(this.arc[0], this.arc[1]);
-			ctx.arc(this.arc[0], this.arc[1], this.arc[2], 0, 2*Math.PI);
-			// ctx.quadraticCurveTo(this.controlPoint[0], this.controlPoint[1], this.endX, this.endY);
+			ctx.arc(this.arc[0], this.arc[1], this.arc[2], this.arc[3], this.arc[4]);
 			ctx.stroke();
 			ctx.closePath();
+
 		} else {
 			ctx.beginPath();
 			ctx.moveTo(this.startX, this.startY);
@@ -452,9 +501,34 @@ function distance(x1, y1, x2, y2) {
 	return Math.sqrt( Math.pow( (x2-x1), 2 ) + Math.pow( (y2-y1), 2 ) );
 }
 
+function rotate(x, y, cx, cy, angle) {
+	// Rotate a point (x,y) around pivot point (cx, cy) by an angle in radians.
+	var newX = Math.cos(angle) * (x - cx) - Math.sin(angle) * (y - cy) + cx;
+	var newY = Math.sin(angle) * (x - cx) + Math.cos(angle) * (y - cy) + cy;
+	return [newX, newY];
+}
+
 function watch() {
 	document.getElementById("stimulateCheck").innerHTML = stimulationInProgress;
-	document.getElementById("currentWedgeAngle").innerHTML = Math.round(Cells[0].currentWedgeAngle / Math.PI * 180 + 90);
+	arcInfo = '';
+	wedgeInfo = '';
+	controlPoint = '';
+	if (highlightedCell > -1) {
+		var lastCell = Cells[highlightedCell];
+		wedgeInfo = Math.round(lastCell.currentWedgeAngle / Math.PI * 180 + 90);
+		var arcInfo = '';
+		for (let i=0; i < lastCell.outputDendrites.length; i++) {
+			if (lastCell.outputDendrites[i].arc != null) {
+				let start = Math.round(lastCell.outputDendrites[i].arc[3] / Math.PI * 180 + 90);
+				let end = Math.round(lastCell.outputDendrites[i].arc[4] / Math.PI * 180 + 90);
+				arcInfo += '[' + i + '] (' + lastCell.outputDendrites[i].arc[0] + ', ' + lastCell.outputDendrites[i].arc[1] + ', ' + lastCell.outputDendrites[i].arc[2] + ', ' + start + ', ' + end + ')<br />';
+				controlPoint += '[' + i + '] (' + lastCell.outputDendrites[i].controlPoint[0] + ', ' + lastCell.outputDendrites[i].controlPoint[1] + ')<br />';
+			}
+		}
+	}
+	document.getElementById("currentWedgeAngle").innerHTML = wedgeInfo;
+	document.getElementById("controlPoint").innerHTML = controlPoint;
+	document.getElementById("arcInfo").innerHTML = arcInfo;
 	// Count active cells
 	var activeTemp = 0;
 	var firingTemp = 0;

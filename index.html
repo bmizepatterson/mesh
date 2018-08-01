@@ -12,11 +12,13 @@
 </head>
 <body>
 	<div id="watchlist" class="w3-tiny w3-border w3-container w3-card">
-		<p>Cells[0].currentWedgeAngle = <span id="currentWedgeAngle"></span></p>
-		<p>Mouse: <span id="mousecoords"></span></p>
-		<p>Stimulation in progress: <span id="stimulateCheck"></span></p>
-		<p>Control Point: <span id="controlPoint"></span></p>
-		<p>Arc Center: <span id="arcCenter"></span></p>
+		<table><tbody>
+			<tr><td>Mouse:</td><td id="mousecoords"></td></tr>
+			<tr><td>Stimulation:</td><td id="stimulateCheck"></td></tr>
+			<tr><td>Wedge angle:</td><td id="currentWedgeAngle"></td></tr>
+			<tr><td>Control Points:</td><td id="controlPoint"></td></tr>
+			<tr><td>Arcs:</td><td id="arcInfo"></td></tr>
+		</tbody></table>
 	</div>	
 	<div class="w3-container">
 		<canvas id="meshIcon" width="40" height="40"></canvas>
