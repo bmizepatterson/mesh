@@ -34,7 +34,8 @@ var				   canvas = document.getElementById('workspace'),
 		  		fireColor = '#ffc107',
 			   curveWidth = 20,
 				fireCount = 0,
-		 stimulationCount = 0;
+		 stimulationCount = 0,
+		 	   showingTip = false;
 
 // Object constructors
 function Cell(x, y, r, threshold, firePower, refactoryPeriod) {
@@ -538,10 +539,18 @@ function checkForCollision(x, y, additionalRadius = 0) {
 
 function setTip(text = '', time = 0) {
 	// Displays a message above the canvas, optionally for a given time.
-	document.getElementById("tip").innerHTML = text;
-	if (time) {
-		window.setTimeout(function () { setTip(); } , time);
-	}
+	if (text) {
+		showingTip = true;
+		document.getElementById("tip").style.display = "block";
+		document.getElementById("tip").innerHTML = text;
+		if (time) {
+			window.setTimeout(function () { setTip(); } , time);
+		}
+	} else {
+		showingTip = false;	
+		document.getElementById("tip").style.display = "none";
+		document.getElementById("tip").innerHTML = '&nbsp;';
+	}	
 }
 
 function setupWorkspace() {
@@ -585,6 +594,10 @@ function resetWorkspace() {
 }
 
 function workspaceMouseClick(event) {
+	if (showingTip) {
+		setTip();
+		return;
+	}
 	var x = event.clientX - canvas.parentElement.offsetLeft + window.pageXOffset;
 	var y = event.clientY - canvas.parentElement.offsetTop + window.pageYOffset;
 	// Are we clicking on a cell body?
@@ -981,6 +994,7 @@ function init() {
 	canvas.addEventListener("click", workspaceMouseClick);
 	canvas.addEventListener("mousemove", workspaceMove);
 	canvas.addEventListener("mouseout", workspaceMoveOut);
+	document.getElementById("tip").addEventListener("click", function() { setTip(); } );
 	// Buttons
 	document.getElementById("startStimulate").addEventListener("click", clickStimulateButton);
 	document.getElementById("stopStimulate").addEventListener("click", stopStimulating);

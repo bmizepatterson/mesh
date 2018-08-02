@@ -43,9 +43,15 @@ button {
 	float:left;
 }
 #tip {
+	display:none;
+	position:absolute;
+	top:205px;
+	width:100%;
 	font-style:italic;
 	margin:0;
-	height: 20px;
+	padding:32px;
+	color:white;
+	background-color:rgba(63, 81, 181, 0.7);
 }
 #watchlist {
 	position:fixed;
