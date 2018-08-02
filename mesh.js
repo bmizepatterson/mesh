@@ -10,7 +10,7 @@ var				   canvas = document.getElementById('workspace'),
 					Cells = [],
 				Dendrites = [],
 			dendriteLimit = 30,
-			   arrowWidth = 20,
+			   arrowWidth = 12,
 			   arrowAngle = Math.PI*0.15, // Must be in radians
 		   highlightWidth = 2,
 		  highlightOffset = 5,
@@ -284,20 +284,19 @@ function Dendrite(originCell = null, destinationCell, startX, startY, endX, endY
 	this.deleted = false;
 	this.highlighted = false;
 
-	this.getArrowCoords = function() {
+	this.getArrowCoords = function(loop) {
 		// Calculate (if needed) the coordinates for each side of the arrow
 		// Uses global arrowWidth variable
 		// Returns three coordinates in an array of six elements: x1, y1, pointX, pointY, x2, y2
+		if (arrowWidth === 0) {
+			console.log('Unable to calculate arrow coordinates of dendrite #'+this.id+'. (Arrow width cannot be zero.)');
+			return false;
+		}
 		if (this.arrowCoords == null) {
-			if (arrowWidth === 0) {
-				console.log('Unable to calculate arrow coordinates of dendrite #'+this.id+'. (Arrow width cannot be zero.)');
-				return false;
-			}
-
 			// Find the coordinates of the point of the arrow, which lies on the circumference of the destination cell
 			var theta = Math.atan2(this.startY-this.endY, this.startX-this.endX);
 			var Px = Math.round(this.destinationCell.r * Math.cos(theta) + this.endX);
-			var Py = Math.round(this.destinationCell.r * Math.sin(theta) + this.endY);			
+			var Py = Math.round(this.destinationCell.r * Math.sin(theta) + this.endY);
 		    var angle = Math.atan2(Py-this.startY,Px-this.startX);
 		    var x1 = Math.round(Px-arrowWidth*Math.cos(angle-Math.PI/6));
 		    var y1 = Math.round(Py-arrowWidth*Math.sin(angle-Math.PI/6));
@@ -381,7 +380,7 @@ function Dendrite(originCell = null, destinationCell, startX, startY, endX, endY
 
 	this.draw = function() {
 	    ctx.beginPath();
-	    ctx.strokeStyle = this.highlighted ? selectColor : dendriteColor;
+	    ctx.strokeStyle = ctx.fillStyle = this.highlighted ? selectColor : dendriteColor;
 	    ctx.lineWidth = this.highlighted ? 1 : 0.5;
 		// If this dendrite creates a feedback loop with another cell, then curve the dendrite lines
 		var loop = false;
@@ -415,10 +414,12 @@ function Dendrite(originCell = null, destinationCell, startX, startY, endX, endY
 		    	ctx.moveTo(this.arrowCoords[0], this.arrowCoords[1]);
 		    	ctx.lineTo(this.arrowCoords[2], this.arrowCoords[3]);
 		    	ctx.lineTo(this.arrowCoords[4], this.arrowCoords[5]);
-		    	ctx.stroke();
 		    	ctx.closePath();
-		    }
+		    	ctx.fill();
+	    	}
 		}
+		    
+		
 	}
 
 	this.delete = function() {
