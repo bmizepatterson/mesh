@@ -3,7 +3,10 @@ var				   canvas = document.getElementById('workspace'),
 				    graph = document.getElementById('graph');
 		  	     graphctx = graph.getContext("2d");
 		   graphMidpointX = Math.round(graph.width/2),
+		   		graphArea = [],
 		   	  graphPoints = [],
+		   	   graphDialX = 0,
+	  recordingInProgress = false;
 			    undoStack = [],
 	stimulationInProgress = false,	// False or the timer ID of the stimulation in progress
 		  drawingDendrite = false,
@@ -456,9 +459,7 @@ function countCells(includeDeleted = false) {
 	} else {
 		var count = 0;
 		for (let i = 0; i < Cells.length; i++) {
-			if (!Cells[i].deleted) {
-				count++;
-			}
+			if (!Cells[i].deleted) count++;
 		}
 		return count;
 	}
@@ -581,10 +582,14 @@ function resetWorkspace() {
 	document.getElementById("stopStimulate").style.display = 'none';
 	document.getElementById("stepStimulate").disabled = false;
 	document.getElementById("pauseActivity").style.display = 'block';
-	document.getElementById("pauseActivity").disabled = false;
+	document.getElementById("pauseActivity").disabled = true;
 	document.getElementById("resumeActivity").style.display = 'none';
 	updateCellInfoTable();
 	updateStatisticsTable();
+	// Reset the activity graph
+	stopRecord();
+	graphDialX = graphArea[0];
+	graphPoints = [];
 }
 
 function workspaceMouseClick(event) {
@@ -678,8 +683,10 @@ function clickStimulateButton() {
 	document.getElementById("stopStimulate").dispatchEvent(new Event('mouseover'));
 	document.getElementById("startStimulate").style.display = "none";
 	document.getElementById("stepStimulate").disabled = true;
+	document.getElementById("pauseActivity").disabled = false;
 	Cells[0].stimulate(1);
 	stimulationInProgress = setInterval(function() { Cells[0].stimulate(1); }, 1000);
+	startRecord();
 }
 
 function stopStimulating() {
@@ -703,6 +710,10 @@ function pauseActivity() {
 	document.getElementById("pauseActivity").style.display = "none";
 	document.getElementById("stopStimulate").disabled = true;
 	document.getElementById("startStimulate").disabled = true;
+	document.getElementById("stepStimulate").disabled = true;
+	// Pause the activity graph
+	stopRecord();
+
 }
 
 function resumeActivity() {
@@ -711,9 +722,12 @@ function resumeActivity() {
 	document.getElementById("pauseActivity").dispatchEvent(new Event('mouseover'));
 	document.getElementById("stopStimulate").disabled = false;
 	document.getElementById("startStimulate").disabled = false;
+	document.getElementById("stepStimulate").disabled = false;
 	for (let i = 0; i < Cells.length; i++) {
 		Cells[i].locked = false;
 	}
+	// Resume the activity graph
+	startRecord();
 }
 
 function updateThresholdValue() {
@@ -877,25 +891,69 @@ function drawIcon(color) {
 	iconctx.closePath();
 }
 
+function startRecord() {
+	recordingInProgress = window.setInterval(record, 100);
+}
+
+function stopRecord() {
+	clearInterval(recordingInProgress);
+	recordingInProgress = false;	
+}
+
+function record(startTime) {
+	graphPoints.push([graphDialX, activeCellCount / countCells() * graphArea[3]]);
+}
+
 function drawGraph() {
-	graphctx.fillStyle = selectColor;
-	for (let i = 0; i < graphPoints.length; i++) {
-		let point = graphPoints[0];
+	graphctx.clearRect(0,0,graph.width,graph.height);
+	// Draw graph dial
+	if (graphDialX <= graph.width) {
+		graphctx.strokeStyle = 'red';
+		graphctx.lineWidth = 1;
 		graphctx.beginPath();
-		graphctx.moveTo(point[0], point[1]);
-		graphctx.arc(point[0], point[1], 2, 0, 2*Math.PI);
-		graphctx.fill();
+		graphctx.moveTo(graphDialX,0);
+		graphctx.lineTo(graphDialX, graphArea[3]);
+		graphctx.stroke();
+		graphctx.closePath();
+	}
+	if (recordingInProgress) {
+		graphDialX++;
+	}
+	
+	// Draw x-axis
+	// Draw y-axis
+	graphctx.strokeStyle = '#CCC';
+	graphctx.lineWidth = 1;
+	var tickSpace = Math.round(graphArea[3]/4);
+	for (let j = 1, y = tickSpace + graphArea[1]; y < graphArea[1] + graphArea[3]; y = y + tickSpace, j++) {
+		let width = (j == 2 ? 20 : 10);
+		graphctx.beginPath();
+		graphctx.moveTo(0, y);
+		graphctx.lineTo(graph.width, y);
+		graphctx.stroke();
+		graphctx.closePath();
+	}
+	// Draw graph points
+	graphctx.strokeStyle = selectColor;
+	for (let i = 0; i < graphPoints.length-1; i++) {
+		let point1 = graphPoints[i];
+		let point2 = graphPoints[i+1];
+		graphctx.beginPath();
+		graphctx.moveTo(point1[0], graphArea[3]-point1[1]);
+		graphctx.lineTo(point2[0], graphArea[3]-point2[1]);
+		// graphctx.arc(point[0], graph.height-point[1], 2, 0, 2*Math.PI);
+		graphctx.stroke();
 		graphctx.closePath();
 	}
 }
 
 function showGraphMenu() {
-	document.getElementById("record").style.display = 'block';
-	document.getElementById("record").classList.add('w3-animate-opacity');
+	document.getElementById("graphMenu").style.display = 'block';
+	document.getElementById("graphMenu").classList.add('w3-animate-opacity');
 }
 
 function hideGraphMenu() {
-	document.getElementById("record").style.display = 'none';	
+	document.getElementById("graphMenu").style.display = 'none';	
 }
 
 function draw() {
@@ -923,8 +981,6 @@ function draw() {
 	// Draw the Mesh icon
 	var color = firingCellCount ? fireColor	: backgroundColor;
 	drawIcon(color);
-	// If there is activity in the mesh, then enable the pause button
-	document.getElementById("pauseActivity").disabled = activeCellCount ? false : true;
 	// Enable the undo button if there is something to undo
 	document.getElementById("undo").disabled = !Boolean(undoStack.length);
 	drawGraph();
@@ -932,20 +988,20 @@ function draw() {
 
 function resize() {
 	graph.width = graph.parentElement.clientWidth;
-	graphMidpointX = Math.round(graph.width / 2);
+	graph.height = 150;
+	// Graph area rectangle defined by startX, startY, width, height 
+	graphArea = [20, 0, graph.width-20, graph.height-10];
+	graphMidpointX = Math.round(graphArea[2] / 2);
 }
 
 function init() {
 	canvas.width = 500;
 	canvas.height = 500;
-	setTip(graph.parentElement.clientWidth,5000);
-	graph.width = graph.parentElement.clientWidth;
-	graph.height = 150;
 	
 	// Add event listeners
 	window.addEventListener("resize", resize);
-	graph.parentElement.addEventListener("mouseover", showGraphMenu);
-	graph.parentElement.addEventListener("mouseout", hideGraphMenu);
+	// graph.parentElement.addEventListener("mouseover", showGraphMenu);
+	// graph.parentElement.addEventListener("mouseout", hideGraphMenu);
 	canvas.addEventListener("click", workspaceMouseClick);
 	canvas.addEventListener("mousemove", workspaceMove);
 	canvas.addEventListener("mouseout", workspaceMoveOut);
@@ -964,6 +1020,8 @@ function init() {
 	document.getElementById("firepowerSetting").addEventListener("mousemove", updateFirepowerValue);
 	document.getElementById("refactoryPeriodSetting").addEventListener("change", updateRefactoryPeriodValue);
 	document.getElementById("refactoryPeriodSetting").addEventListener("mousemove", updateRefactoryPeriodValue);
+	// document.getElementById("startRecord").addEventListener("click", startRecord);
+	// document.getElementById("stopRecord").addEventListener("click", stopRecord);
 
 	// Tips
 	document.getElementById("startStimulate").addEventListener("mouseover", function() { setTip('Click "Start" to start automatically stimulating the first cell once per second.'); });
@@ -982,6 +1040,8 @@ function init() {
 	document.getElementById("clearWorkspace").addEventListener("mouseout", function() { setTip(); } );
 
 	setupWorkspace();	
+	resize();
+	graphDialX = graphArea[0];
 };
 
 window.requestAnimFrame = (function(){

@@ -30,14 +30,11 @@ button {
 	left: 10px;
 }
 #graphWrapper {
-	position: relative;
 	margin-top:20px;
 }
 #graphWrapper p {
 	font-size: 12px;
 	font-weight: bold;
-	position:absolute;
-	width:100%;
 	text-align:center;
 }
 #meshIcon {

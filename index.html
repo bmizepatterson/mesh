@@ -42,7 +42,7 @@
 					<button id="startStimulate" class="w3-bar-item w3-button w3-indigo" style="width:20%;"><i class="material-icons">loop</i>Start</button>
 					<button id="stopStimulate" class="w3-bar-item w3-button w3-red" style="width:20%;display:none;"><i class="material-icons">stop</i>Stop</button>
 					<button id="stepStimulate" class="w3-bar-item w3-button w3-blue" style="width:20%;"><i class="material-icons">skip_next</i>Step</button>
-					<button id="pauseActivity" class="w3-bar-item w3-button w3-red" style="width:20%;"><i class="material-icons">pause</i>Pause</button>
+					<button id="pauseActivity" class="w3-bar-item w3-button w3-red" style="width:20%;" disabled><i class="material-icons">pause</i>Pause</button>
 					<button id="resumeActivity" class="w3-bar-item w3-button w3-indigo" style="width:20%;display:none;"><i class="material-icons">play_arrow</i>Resume</button>
 					<button id="resetWorkspace" class="w3-bar-item w3-button w3-black" style="width:20%;"><i class="material-icons">replay</i>Reset</button>
 					<button id="clearWorkspace" class="w3-bar-item w3-button w3-white" style="width:20%;"><i class="material-icons">clear</i>Clear</button>
@@ -85,9 +85,6 @@
 			<div class='w3-container'>
 				<div id='graphWrapper' class="w3-border">
 					<p>Mesh Activity</p>
-					<div id='graphMenu'>
-						<button id="record" class="graphMenuButton w3-btn w3-dark-gray" style="display:none;"><i class="material-icons">fiber_manual_record</i></button>
-					</div>
 					<canvas id="graph"></canvas>
 				</div>
 			</div>
