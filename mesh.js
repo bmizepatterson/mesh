@@ -10,7 +10,7 @@ var				   canvas = document.getElementById('workspace'),
 					Cells = [],
 				Dendrites = [],
 			dendriteLimit = 30,
-			   arrowWidth = 10,
+			   arrowWidth = 20,
 			   arrowAngle = Math.PI*0.15, // Must be in radians
 		   highlightWidth = 2,
 		  highlightOffset = 5,
@@ -287,44 +287,29 @@ function Dendrite(originCell = null, destinationCell, startX, startY, endX, endY
 	this.getArrowCoords = function() {
 		// Calculate (if needed) the coordinates for each side of the arrow
 		// Uses global arrowWidth variable
-		// Returns the coordinates in an array of four elements: x1, y1, x2, y2
+		// Returns three coordinates in an array of six elements: x1, y1, pointX, pointY, x2, y2
 		if (this.arrowCoords == null) {
 			if (arrowWidth === 0) {
 				console.log('Unable to calculate arrow coordinates of dendrite #'+this.id+'. (Arrow width cannot be zero.)');
 				return false;
 			}
-			// If the destination cell is on the right, then the arrow needs to point to the right
-			var x1, y1, x2, y2;
-			if (this.endX > this.startX) {
-				x1 = Math.round(this.midpointX - Math.cos(arrowAngle - Math.asin(2*(this.midpointY-this.destinationCell.y)/this.length))*arrowWidth/(2*Math.sin(arrowAngle)));
-				y1 = Math.round(this.midpointY - Math.sin(arrowAngle - Math.asin(2*(this.midpointY-this.destinationCell.y)/this.length))*arrowWidth/(2*Math.sin(arrowAngle)));
-				x2 = Math.round(this.midpointX - Math.cos(arrowAngle + Math.asin(2*(this.midpointY-this.destinationCell.y)/this.length))*arrowWidth/(2*Math.sin(arrowAngle)));
-				y2 = Math.round(this.midpointY + Math.sin(arrowAngle + Math.asin(2*(this.midpointY-this.destinationCell.y)/this.length))*arrowWidth/(2*Math.sin(arrowAngle)));
-			} else if (this.endX < this.startX) {
-				x1 = Math.round(this.midpointX + Math.cos(arrowAngle + Math.asin(2*(this.midpointY-this.destinationCell.y)/this.length))*arrowWidth/(2*Math.sin(arrowAngle)));
-				y1 = Math.round(this.midpointY + Math.sin(arrowAngle + Math.asin(2*(this.midpointY-this.destinationCell.y)/this.length))*arrowWidth/(2*Math.sin(arrowAngle)));
-				x2 = Math.round(this.midpointX + Math.cos(arrowAngle - Math.asin(2*(this.midpointY-this.destinationCell.y)/this.length))*arrowWidth/(2*Math.sin(arrowAngle)));
-				y2 = Math.round(this.midpointY - Math.sin(arrowAngle - Math.asin(2*(this.midpointY-this.destinationCell.y)/this.length))*arrowWidth/(2*Math.sin(arrowAngle)));
-			} else {
-				// This dendrite is vertical. Should it point up or down?
-				x1 = Math.round(this.midpointX - arrowWidth/2);
-				x2 = Math.round(this.midpointX + arrowWidth/2);
-				// Y values are the same if it's pointing up or down
-				if (this.startY < this.endY) {
-					// Point up
-					y1 = y2 = Math.round(this.midpointY - arrowWidth/(2*Math.tan(arrowAngle)));
-				} else {
-					// Point down
-					y1 = y2 = Math.round(this.midpointY + arrowWidth/(2*Math.tan(arrowAngle)));
-				}
-			}
-			this.arrowCoords = [x1,y1,x2,y2];
+
+			// Find the coordinates of the point of the arrow, which lies on the circumference of the destination cell
+			var theta = Math.atan2(this.startY-this.endY, this.startX-this.endX);
+			var Px = Math.round(this.destinationCell.r * Math.cos(theta) + this.endX);
+			var Py = Math.round(this.destinationCell.r * Math.sin(theta) + this.endY);			
+		    var angle = Math.atan2(Py-this.startY,Px-this.startX);
+		    var x1 = Math.round(Px-arrowWidth*Math.cos(angle-Math.PI/6));
+		    var y1 = Math.round(Py-arrowWidth*Math.sin(angle-Math.PI/6));
+		    var x2 = Math.round(Px-arrowWidth*Math.cos(angle+Math.PI/6));
+		    var y2 = Math.round(Py-arrowWidth*Math.sin(angle+Math.PI/6));
+			this.arrowCoords = [x1,y1,Px,Py,x2,y2];
 		}
 		return this.arrowCoords;
 	}
 
 	this.getControlPoint = function() {
-		// Calculate (if needed) the coordinates for the control point needed for drawing the arc between two cells
+		// Calculate (if needed) the coordinates of the control point needed for drawing the arc between two cells in a lopp
 		// Uses global curveWidth variable
 		// Returns the coordinates in an array [x, y].
 		if (this.controlPoint == null) {
@@ -363,10 +348,9 @@ function Dendrite(originCell = null, destinationCell, startX, startY, endX, endY
 			Bx = this.endX; By = this.endY;
 			Cx = this.getControlPoint()[0]; Cy = this.getControlPoint()[1];
 			Ax2 = Ax*Ax; Ay2 = Ay*Ay; Bx2 = Bx*Bx; By2 = By*By; Cx2 = Cx*Cx; Cy2 = Cy*Cy;
-
 			if (Ax === Bx) {
 				// We've got a vertical line. The formula for calculating Px returns undefined when Ax==Bx, since 2(Bx-Ax) is the denominator.
-				// So rotate the entire triangle ABC by 90 degrees on the midpoint, so we're not working with a vertical line anymore.
+				// So, rotate the entire triangle ABC by 90 degrees on the midpoint of AB, so we're not working with a vertical line anymore.
 				oldAx = Ax; oldAy = Ay; oldBx = Bx; oldBy = By;
 				var newStartPoint = rotate(this.startX, this.startY, this.midpointX, this.midpointY, Math.PI/2);
 				var newEndPoint = rotate(this.endX, this.endY, this.midpointX, this.midpointY, Math.PI/2);
@@ -374,10 +358,8 @@ function Dendrite(originCell = null, destinationCell, startX, startY, endX, endY
 				Ax = newStartPoint[0]; Ay = newStartPoint[1]; Ax2 = Ax*Ax; Ay2 = Ay*Ay;
 				Bx = newEndPoint[0]; By = newEndPoint[1]; Bx2 = Bx*Bx; By2 = By*By;
 				Cx = newControlPoint[0]; Cy = newControlPoint[1]; Cx2 = Cx*Cx; Cy2 = Cy*Cy;
-
 				Py = ( ( (Bx-Ax) * (Cx2+Cy2-Bx2-By2) ) - ( (Cx-Bx) * (Bx2+By2-Ax2-Ay2) ) ) / ( (2 * (Cy-By) * (Bx-Ax) ) - (2 * (By-Ay) * (Cx-Bx) ) );
 				Px = ( (Bx2+By2-Ax2-Ay2) - (2 * Py * (By-Ay) ) ) / ( 2 * (Bx-Ax) );
-
 				// Rotate everything back -90 degrees.
 				Ax = oldAx; Ay = oldAy; Bx = oldBx; By = oldBy;
 				var P = rotate(Px, Py, this.midpointX, this.midpointY, -Math.PI/2);
@@ -387,22 +369,14 @@ function Dendrite(originCell = null, destinationCell, startX, startY, endX, endY
 				Py = ( ( (Bx-Ax) * (Cx2+Cy2-Bx2-By2) ) - ( (Cx-Bx) * (Bx2+By2-Ax2-Ay2) ) ) / ( (2 * (Cy-By) * (Bx-Ax) ) - (2 * (By-Ay) * (Cx-Bx) ) );
 				Px = ( (Bx2+By2-Ax2-Ay2) - (2 * Py * (By-Ay) ) ) / ( 2 * (Bx-Ax) );
 			}
-
 			Pr = Math.round(distance(Px, Py, Ax, Ay));
 			Py = Math.round(Py);
 			Px = Math.round(Px);
 			startAngle = Math.atan2(Ay - Py, Ax - Px);
 			endAngle = Math.atan2(By - Py, Bx - Px);
-
 			this.arc = [Px, Py, Pr, startAngle, endAngle];
 		}
 		return this.arc;
-	}
-
-	this.rotate = function(x, y, cx, cy, angle) {
-		var newX = Math.cos(angle) * (x - cx) - Math.sin(angle) * (y - cy) + cx;
-		var newY = Math.sin(angle) * (x - cx) + Math.cos(angle) * (y - cy) + cy;
-		return [newX, newY];
 	}
 
 	this.draw = function() {
@@ -439,8 +413,8 @@ function Dendrite(originCell = null, destinationCell, startX, startY, endX, endY
 		    if (this.getArrowCoords()) {
 		    	ctx.beginPath();
 		    	ctx.moveTo(this.arrowCoords[0], this.arrowCoords[1]);
-		    	ctx.lineTo(Math.round(this.midpointX), Math.round(this.midpointY));
 		    	ctx.lineTo(this.arrowCoords[2], this.arrowCoords[3]);
+		    	ctx.lineTo(this.arrowCoords[4], this.arrowCoords[5]);
 		    	ctx.stroke();
 		    	ctx.closePath();
 		    }
@@ -513,11 +487,12 @@ function watch() {
 	arcInfo = '';
 	wedgeInfo = '';
 	controlPoint = '';
+	arrowInfo = '';
 	if (highlightedCell > -1) {
 		var lastCell = Cells[highlightedCell];
 		wedgeInfo = Math.round(lastCell.currentWedgeAngle / Math.PI * 180 + 90);
 		var arcInfo = '';
-		for (let i=0; i < lastCell.outputDendrites.length; i++) {
+		for (let i = 0; i < lastCell.outputDendrites.length; i++) {
 			if (lastCell.outputDendrites[i].arc != null) {
 				let start = Math.round(lastCell.outputDendrites[i].arc[3] / Math.PI * 180 + 90);
 				let end = Math.round(lastCell.outputDendrites[i].arc[4] / Math.PI * 180 + 90);
@@ -525,10 +500,16 @@ function watch() {
 				controlPoint += '[' + i + '] (' + lastCell.outputDendrites[i].controlPoint[0] + ', ' + lastCell.outputDendrites[i].controlPoint[1] + ')<br />';
 			}
 		}
+		for (let j = 0; j < lastCell.inputDendrites.length; j++) {
+			if (lastCell.inputDendrites[j].arrowCoords != null) {
+				arrowInfo += '[' + j + '] (' + lastCell.inputDendrites[j].arrowCoords[0] + ', ' + lastCell.inputDendrites[j].arrowCoords[1] + '), (' + lastCell.inputDendrites[j].arrowCoords[2] + ', ' + lastCell.inputDendrites[j].arrowCoords[3] + '), (' + lastCell.inputDendrites[j].arrowCoords[4] + ', ' + lastCell.inputDendrites[j].arrowCoords[5] + ')<br />';
+			}
+		}
 	}
 	document.getElementById("currentWedgeAngle").innerHTML = wedgeInfo;
 	document.getElementById("controlPoint").innerHTML = controlPoint;
 	document.getElementById("arcInfo").innerHTML = arcInfo;
+	document.getElementById("arrowInfo").innerHTML = arrowInfo;
 	// Count active cells
 	var activeTemp = 0;
 	var firingTemp = 0;
@@ -570,7 +551,7 @@ function setupWorkspace() {
 	var firstCell = addCell(75, 250, 20, 1, 1, 250, false);
 	// Create the first dendrite, which is a special case: it doesn't have an origin cell
 	// because the first cell is stimulated by clicking the "start" or "step" button.
-	addDendrite(null, firstCell, 0, firstCell.y, firstCell.x-firstCell.r, firstCell.y);
+	addDendrite(null, firstCell, 0, firstCell.y, firstCell.x, firstCell.y);
 	updateStatisticsTable();
   	updateCellInfoTable();
 }
