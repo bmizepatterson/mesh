@@ -1013,18 +1013,18 @@ function init() {
 	document.getElementById("refactoryPeriodSetting").addEventListener("change", updateRefactoryPeriodValue);
 	document.getElementById("refactoryPeriodSetting").addEventListener("mousemove", updateRefactoryPeriodValue);
 	// Button tips
-	document.getElementById("startStimulate").addEventListener("mouseover", function() { setTip('Click "Start" to start automatically stimulating the first cell once per second.'); });
-	document.getElementById("startStimulate").addEventListener("mouseout", function() { setTip(); } );
-	document.getElementById("stopStimulate").addEventListener("mouseover", function() { setTip('Click "Stop" to stop automatically stimulating the first cell once per second.'); });
-	document.getElementById("stopStimulate").addEventListener("mouseout", function() { setTip(); } );
-	document.getElementById("pauseActivity").addEventListener("mouseover", function() { setTip('Click "Pause" to halt all neuron activity.'); });
-	document.getElementById("pauseActivity").addEventListener("mouseout", function() { setTip(); } );
-	document.getElementById("resumeActivity").addEventListener("mouseover", function() { setTip('Click "Resume" to resume neuron activity.'); });
-	document.getElementById("resumeActivity").addEventListener("mouseout", function() { setTip(); } );
-	document.getElementById("resetWorkspace").addEventListener("mouseover", function() { setTip('Click "Reset" to reset the neurons and Mesh statistics.'); });
-	document.getElementById("resetWorkspace").addEventListener("mouseout", function() { setTip(); } );
-	document.getElementById("clearWorkspace").addEventListener("mouseover", function() { setTip('Click "Clear" to delete all neurons.'); });
-	document.getElementById("clearWorkspace").addEventListener("mouseout", function() { setTip(); } );
+	// document.getElementById("startStimulate").addEventListener("mouseover", function() { setTip('Click "Start" to start automatically stimulating the first cell once per second.'); });
+	// document.getElementById("startStimulate").addEventListener("mouseout", function() { setTip(); } );
+	// document.getElementById("stopStimulate").addEventListener("mouseover", function() { setTip('Click "Stop" to stop automatically stimulating the first cell once per second.'); });
+	// document.getElementById("stopStimulate").addEventListener("mouseout", function() { setTip(); } );
+	// document.getElementById("pauseActivity").addEventListener("mouseover", function() { setTip('Click "Pause" to halt all neuron activity.'); });
+	// document.getElementById("pauseActivity").addEventListener("mouseout", function() { setTip(); } );
+	// document.getElementById("resumeActivity").addEventListener("mouseover", function() { setTip('Click "Resume" to resume neuron activity.'); });
+	// document.getElementById("resumeActivity").addEventListener("mouseout", function() { setTip(); } );
+	// document.getElementById("resetWorkspace").addEventListener("mouseover", function() { setTip('Click "Reset" to reset the neurons and Mesh statistics.'); });
+	// document.getElementById("resetWorkspace").addEventListener("mouseout", function() { setTip(); } );
+	// document.getElementById("clearWorkspace").addEventListener("mouseover", function() { setTip('Click "Clear" to delete all neurons.'); });
+	// document.getElementById("clearWorkspace").addEventListener("mouseout", function() { setTip(); } );
 
 	setupWorkspace();	
 	resize();
