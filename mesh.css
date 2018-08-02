@@ -10,6 +10,36 @@ i {
 button {
 	font-size:13px;
 }
+#cellInfo {
+	margin:0;
+	height: 20px;
+}
+#cellInfoTable {
+	margin-top:20px;
+	margin-bottom:20px;
+	cursor: default;
+}
+#contextMenu {
+	position:absolute;
+	top: 10px;
+	right: 10px;
+}
+#graphMenu {
+	position:absolute;
+	top: 10px;
+	left: 10px;
+}
+#graphWrapper {
+	position: relative;
+	margin-top:20px;
+}
+#graphWrapper p {
+	font-size: 12px;
+	font-weight: bold;
+	position:absolute;
+	width:100%;
+	text-align:center;
+}
 #meshIcon {
 	margin-top:16px;
 	margin-right:4px;
@@ -19,15 +49,6 @@ button {
 	font-style:italic;
 	margin:0;
 	height: 20px;
-}
-#cellInfo {
-	margin:0;
-	height: 20px;
-}
-#cellInfoTable {
-	margin-top:20px;
-	margin-bottom:20px;
-	cursor: default;
 }
 #watchlist {
 	position:fixed;
@@ -41,20 +62,21 @@ button {
 	padding:0;
 	vertical-align: top;
 }
-#contextMenu {
-	position:absolute;
-	top: 10px;
-	right: 10px;
-}
 .contextMenuButton {
 	margin-left:4px;
 	margin-right:4px;
 	padding: 8px 8px 4px 8px;
 	float:right;
 }
-.contextMenuButton i {
+.contextMenuButton i, .graphMenuButton i {
 	font-size:24px!important;
 	margin: 0;
+}
+.graphMenuButton {
+	margin-left:4px;
+	margin-right:4px;
+	padding: 8px 8px 4px 8px;
+	float:left;
 }
 .w3-table.compact td {
 	padding-top:4px;

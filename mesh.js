@@ -1,5 +1,9 @@
 var				   canvas = document.getElementById('workspace'),
 					  ctx = canvas.getContext("2d"),
+				    graph = document.getElementById('graph');
+		  	     graphctx = graph.getContext("2d");
+		   graphMidpointX = Math.round(graph.width/2),
+		   	  graphPoints = [],
 			    undoStack = [],
 	stimulationInProgress = false,	// False or the timer ID of the stimulation in progress
 		  drawingDendrite = false,
@@ -873,6 +877,27 @@ function drawIcon(color) {
 	iconctx.closePath();
 }
 
+function drawGraph() {
+	graphctx.fillStyle = selectColor;
+	for (let i = 0; i < graphPoints.length; i++) {
+		let point = graphPoints[0];
+		graphctx.beginPath();
+		graphctx.moveTo(point[0], point[1]);
+		graphctx.arc(point[0], point[1], 2, 0, 2*Math.PI);
+		graphctx.fill();
+		graphctx.closePath();
+	}
+}
+
+function showGraphMenu() {
+	document.getElementById("record").style.display = 'block';
+	document.getElementById("record").classList.add('w3-animate-opacity');
+}
+
+function hideGraphMenu() {
+	document.getElementById("record").style.display = 'none';	
+}
+
 function draw() {
 	ctx.clearRect(0, 0, 500, 500);
 	// Draw all dendrites
@@ -902,15 +927,25 @@ function draw() {
 	document.getElementById("pauseActivity").disabled = activeCellCount ? false : true;
 	// Enable the undo button if there is something to undo
 	document.getElementById("undo").disabled = !Boolean(undoStack.length);
+	drawGraph();
+}
+
+function resize() {
+	graph.width = graph.parentElement.clientWidth;
+	graphMidpointX = Math.round(graph.width / 2);
 }
 
 function init() {
 	canvas.width = 500;
 	canvas.height = 500;
-
-	drawIcon();
+	setTip(graph.parentElement.clientWidth,5000);
+	graph.width = graph.parentElement.clientWidth;
+	graph.height = 150;
 	
 	// Add event listeners
+	window.addEventListener("resize", resize);
+	graph.parentElement.addEventListener("mouseover", showGraphMenu);
+	graph.parentElement.addEventListener("mouseout", hideGraphMenu);
 	canvas.addEventListener("click", workspaceMouseClick);
 	canvas.addEventListener("mousemove", workspaceMove);
 	canvas.addEventListener("mouseout", workspaceMoveOut);
