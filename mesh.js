@@ -110,7 +110,6 @@ function Cell(x, y, r, threshold, firePower, refactoryPeriod) {
 		// Complete the wedge-circle, stimulate children, and reset after a refactory period
 		this.firing = true;
 		fireCount++;
-		updateStatisticsTable();
 		updateCellInfoTable(this.id, 'status', this.getStatus());
 
 		var parentCell = this;
@@ -236,7 +235,6 @@ function Cell(x, y, r, threshold, firePower, refactoryPeriod) {
 		newPotential = (newPotential > this.threshold) ? this.threshold : newPotential;
 		this.potential = newPotential;
 		stimulationCount++;
-		updateStatisticsTable();
   		updateCellInfoTable(this.id, 'potential', this.potential);
   		updateCellInfoTable(this.id, 'status', this.getStatus());
 	}
@@ -261,13 +259,11 @@ function Cell(x, y, r, threshold, firePower, refactoryPeriod) {
 		for (var i = 0; i < this.outputDendrites.length; i++) {
 			this.outputDendrites[i].delete();
 		}
-		updateStatisticsTable();
 		updateCellInfoTable();
 	}
 
 	this.undelete = function() {
 		this.deleted = false;
-		updateStatisticsTable();
 		updateCellInfoTable();
 	}
 
@@ -525,7 +521,6 @@ function watch() {
 	document.getElementById("controlPoint").innerHTML = controlPoint;
 	document.getElementById("arcInfo").innerHTML = arcInfo;
 	document.getElementById("arrowInfo").innerHTML = arrowInfo;
-	updateStatisticsTable();
 }
 
 function checkForCollision(x, y, additionalRadius = 0) {
@@ -555,7 +550,6 @@ function setupWorkspace() {
 	// Create the first dendrite, which is a special case: it doesn't have an origin cell
 	// because the first cell is stimulated by clicking the "start" or "step" button.
 	addDendrite(null, firstCell, 0, firstCell.y, firstCell.x, firstCell.y);
-	updateStatisticsTable();
   	updateCellInfoTable();
 }
 
@@ -575,7 +569,7 @@ function resetWorkspace() {
 		if (Cells[i].deleted) continue;
 		Cells[i].reset();
 	}
-	fireCount = stimulationCount = firingNow = 0;
+	fireCount = stimulationCount = activeCellCount = 0;
 	document.getElementById("tip").innerHTML = '';
 	document.getElementById("startStimulate").style.display = 'block';
 	document.getElementById("startStimulate").disabled = false;
@@ -584,7 +578,6 @@ function resetWorkspace() {
 	document.getElementById("pauseActivity").disabled = true;
 	document.getElementById("resumeActivity").style.display = 'none';
 	updateCellInfoTable();
-	updateStatisticsTable();
 	// Reset the activity graph
 	stopRecord();
 	graphDialX = graphArea[0];
@@ -756,7 +749,6 @@ function addDendrite(originCell = null, destinationCell, startX, startY, endX, e
 	}
 	destinationCell.inputDendrites.push(newDen);
 	updateCellInfoTable();
-	updateStatisticsTable();
 	return newDen;
 }
 
@@ -769,7 +761,6 @@ function addCell(newCellX, newCellY, newRadius, newThreshold, newFirePower, refa
 		newCell.id = Cells.length;
 		Cells.push(newCell);
 		updateCellInfoTable();
-		updateStatisticsTable();
 		if (initialHighlight) {
 			newCell.highlight();
 		}
@@ -811,7 +802,6 @@ function undo() {
 			console.log('Attempted to undo an unrecognized action.');
 	}
 	updateCellInfoTable();
-	updateStatisticsTable();
 }
  
 function updateCellInfoTable(cellid = null, property = null, value = null) {
@@ -866,7 +856,7 @@ function updateStatisticsTable() {
 	document.getElementById("totalDendrites").innerHTML = countDendrites();
 	document.getElementById("totalFires").innerHTML = fireCount;
 	document.getElementById("totalStimulations").innerHTML = stimulationCount;
-	document.getElementById("meshActivity").innerHTML = Math.round(activeCellCount / countCells() * 100) + '%';
+	document.getElementById("meshActivity").innerHTML = Math.round(activeCellCount / countCells() * 250) + '%';
 }
 
 function drawIcon(color) {
@@ -901,20 +891,6 @@ function record(startTime) {
 
 function drawGraph() {
 	graphctx.clearRect(0,0,graph.width,graph.height);
-	// Draw graph dial
-	if (graphDialX <= graph.width) {
-		graphctx.strokeStyle = 'red';
-		graphctx.lineWidth = 1;
-		graphctx.beginPath();
-		graphctx.moveTo(graphDialX,0);
-		graphctx.lineTo(graphDialX, graphArea[3]);
-		graphctx.stroke();
-		graphctx.closePath();
-	}
-	if (recordingInProgress) {
-		graphDialX++;
-	}
-	
 	// Draw x-axis
 	// Draw y-axis
 	graphctx.strokeStyle = '#CCC';
@@ -930,15 +906,30 @@ function drawGraph() {
 	}
 	// Draw graph points
 	graphctx.strokeStyle = selectColor;
+	graphctx.lineWidth = 1;
 	for (let i = 0; i < graphPoints.length-1; i++) {
 		let point1 = graphPoints[i];
 		let point2 = graphPoints[i+1];
+		if (recordingInProgress && graphDialX >= graphArea[2]) {
+			point1[0] = point1[0] - 0.5;
+			point2[0] = point2[0] - 0.5;
+		}
 		graphctx.beginPath();
 		graphctx.moveTo(point1[0], graphArea[3]-point1[1]);
 		graphctx.lineTo(point2[0], graphArea[3]-point2[1]);
-		// graphctx.arc(point[0], graph.height-point[1], 2, 0, 2*Math.PI);
 		graphctx.stroke();
 		graphctx.closePath();
+	}
+	// Draw graph dial
+	graphctx.strokeStyle = 'red';
+	graphctx.lineWidth = 1;
+	graphctx.beginPath();
+	graphctx.moveTo(graphDialX,0);
+	graphctx.lineTo(graphDialX, graphArea[3]);
+	graphctx.stroke();
+	graphctx.closePath();
+	if (recordingInProgress && graphDialX < graphArea[2]) {
+		graphDialX++;
 	}
 }
 
@@ -969,6 +960,7 @@ function draw() {
 	drawIcon(color);
 	// Enable the undo button if there is something to undo
 	document.getElementById("undo").disabled = !Boolean(undoStack.length);
+	updateStatisticsTable();
 	drawGraph();
 }
 
