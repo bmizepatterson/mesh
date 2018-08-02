@@ -580,7 +580,6 @@ function resetWorkspace() {
 	document.getElementById("startStimulate").style.display = 'block';
 	document.getElementById("startStimulate").disabled = false;
 	document.getElementById("stopStimulate").style.display = 'none';
-	document.getElementById("stepStimulate").disabled = false;
 	document.getElementById("pauseActivity").style.display = 'block';
 	document.getElementById("pauseActivity").disabled = true;
 	document.getElementById("resumeActivity").style.display = 'none';
@@ -682,22 +681,20 @@ function clickStimulateButton() {
 	document.getElementById("stopStimulate").style.display = "block";
 	document.getElementById("stopStimulate").dispatchEvent(new Event('mouseover'));
 	document.getElementById("startStimulate").style.display = "none";
-	document.getElementById("stepStimulate").disabled = true;
 	document.getElementById("pauseActivity").disabled = false;
+	document.getElementById("resumeActivity").style.display = "none";
 	Cells[0].stimulate(1);
 	stimulationInProgress = setInterval(function() { Cells[0].stimulate(1); }, 1000);
 	startRecord();
 }
 
 function stopStimulating() {
-	if (stimulationInProgress) {
-		clearInterval(stimulationInProgress);
-		stimulationInProgress = false;
-		document.getElementById("stopStimulate").style.display = "none";
-		document.getElementById("startStimulate").style.display = "block";
-		document.getElementById("startStimulate").dispatchEvent(new Event('mouseover'));
-		document.getElementById("stepStimulate").disabled = false;
-	}
+	clearInterval(stimulationInProgress);
+	stimulationInProgress = false;
+	document.getElementById("startStimulate").style.display = "block";
+	document.getElementById("startStimulate").dispatchEvent(new Event('mouseover'));
+	document.getElementById("stopStimulate").style.display = "none";
+	document.getElementById("resumeActivity").style.display = "none";
 }
 
 function pauseActivity() {
@@ -710,19 +707,17 @@ function pauseActivity() {
 	document.getElementById("pauseActivity").style.display = "none";
 	document.getElementById("stopStimulate").disabled = true;
 	document.getElementById("startStimulate").disabled = true;
-	document.getElementById("stepStimulate").disabled = true;
 	// Pause the activity graph
 	stopRecord();
 
 }
 
 function resumeActivity() {
-	document.getElementById("resumeActivity").style.display = "none";
 	document.getElementById("pauseActivity").style.display = "block";
 	document.getElementById("pauseActivity").dispatchEvent(new Event('mouseover'));
+	document.getElementById("resumeActivity").style.display = "none";
 	document.getElementById("stopStimulate").disabled = false;
 	document.getElementById("startStimulate").disabled = false;
-	document.getElementById("stepStimulate").disabled = false;
 	for (let i = 0; i < Cells.length; i++) {
 		Cells[i].locked = false;
 	}
@@ -947,15 +942,6 @@ function drawGraph() {
 	}
 }
 
-function showGraphMenu() {
-	document.getElementById("graphMenu").style.display = 'block';
-	document.getElementById("graphMenu").classList.add('w3-animate-opacity');
-}
-
-function hideGraphMenu() {
-	document.getElementById("graphMenu").style.display = 'none';	
-}
-
 function draw() {
 	ctx.clearRect(0, 0, 500, 500);
 	// Draw all dendrites
@@ -1000,36 +986,31 @@ function init() {
 	
 	// Add event listeners
 	window.addEventListener("resize", resize);
-	// graph.parentElement.addEventListener("mouseover", showGraphMenu);
-	// graph.parentElement.addEventListener("mouseout", hideGraphMenu);
 	canvas.addEventListener("click", workspaceMouseClick);
 	canvas.addEventListener("mousemove", workspaceMove);
 	canvas.addEventListener("mouseout", workspaceMoveOut);
+	// Buttons
 	document.getElementById("startStimulate").addEventListener("click", clickStimulateButton);
 	document.getElementById("stopStimulate").addEventListener("click", stopStimulating);
 	document.getElementById("pauseActivity").addEventListener("click", pauseActivity);
 	document.getElementById("resumeActivity").addEventListener("click", resumeActivity);
-	document.getElementById("stepStimulate").addEventListener("click", function() { Cells[0].stimulate(1); });
 	document.getElementById("resetWorkspace").addEventListener("click", resetWorkspace);
 	document.getElementById("clearWorkspace").addEventListener("click", clearWorkspace);
+	// Context menu
 	document.getElementById("deleteCell").addEventListener("click", function() { if (selectedCell) deleteCell(selectedCell); } );
 	document.getElementById("undo").addEventListener("click", undo);
+	// Settings
 	document.getElementById("thresholdSetting").addEventListener("change", updateThresholdValue);
 	document.getElementById("thresholdSetting").addEventListener("mousemove", updateThresholdValue);
 	document.getElementById("firepowerSetting").addEventListener("change", updateFirepowerValue);
 	document.getElementById("firepowerSetting").addEventListener("mousemove", updateFirepowerValue);
 	document.getElementById("refactoryPeriodSetting").addEventListener("change", updateRefactoryPeriodValue);
 	document.getElementById("refactoryPeriodSetting").addEventListener("mousemove", updateRefactoryPeriodValue);
-	// document.getElementById("startRecord").addEventListener("click", startRecord);
-	// document.getElementById("stopRecord").addEventListener("click", stopRecord);
-
-	// Tips
+	// Button tips
 	document.getElementById("startStimulate").addEventListener("mouseover", function() { setTip('Click "Start" to start automatically stimulating the first cell once per second.'); });
 	document.getElementById("startStimulate").addEventListener("mouseout", function() { setTip(); } );
 	document.getElementById("stopStimulate").addEventListener("mouseover", function() { setTip('Click "Stop" to stop automatically stimulating the first cell once per second.'); });
 	document.getElementById("stopStimulate").addEventListener("mouseout", function() { setTip(); } );
-	document.getElementById("stepStimulate").addEventListener("mouseover", function() { setTip('Click "Step" to stimulate the first cell just once.'); });
-	document.getElementById("stepStimulate").addEventListener("mouseout", function() { setTip(); } );
 	document.getElementById("pauseActivity").addEventListener("mouseover", function() { setTip('Click "Pause" to halt all neuron activity.'); });
 	document.getElementById("pauseActivity").addEventListener("mouseout", function() { setTip(); } );
 	document.getElementById("resumeActivity").addEventListener("mouseover", function() { setTip('Click "Resume" to resume neuron activity.'); });
