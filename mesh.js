@@ -558,6 +558,7 @@ function clearWorkspace() {
 	resetWorkspace();
 	Cells = [];
 	Dendrites = [];
+	undoStack = [];
 	setupWorkspace();
 }
 
