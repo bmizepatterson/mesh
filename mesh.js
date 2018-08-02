@@ -1,5 +1,6 @@
 var				   canvas = document.getElementById('workspace'),
 					  ctx = canvas.getContext("2d"),
+			    undoStack = [],
 	stimulationInProgress = false,	// False or the timer ID of the stimulation in progress
 		  drawingDendrite = false,
  		  activeCellCount = 0,
@@ -196,8 +197,8 @@ function Cell(x, y, r, threshold, firePower, refactoryPeriod) {
 		}
 		if (this.id !== 0) {
 			// Don't show the delete button for the first cell
-			document.getElementById("contextMenu").style.display="block";
-			document.getElementById("contextMenu").classList.add('w3-animate-opacity');
+			document.getElementById("deleteCell").style.display="block";
+			document.getElementById("deleteCell").classList.add('w3-animate-opacity');
 		}
 	}
 
@@ -216,7 +217,7 @@ function Cell(x, y, r, threshold, firePower, refactoryPeriod) {
 			row.children[i].style.color = 'initial';
 			row.children[i].style.backgroundColor = 'initial';
 		}
-		document.getElementById("contextMenu").style.display="none";
+		document.getElementById("deleteCell").style.display="none";
 	}
 
 	this.stimulate = function(power) {
@@ -253,6 +254,12 @@ function Cell(x, y, r, threshold, firePower, refactoryPeriod) {
 		for (var i = 0; i < this.outputDendrites.length; i++) {
 			this.outputDendrites[i].delete();
 		}
+		updateStatisticsTable();
+		updateCellInfoTable();
+	}
+
+	this.undelete = function() {
+		this.deleted = false;
 		updateStatisticsTable();
 		updateCellInfoTable();
 	}
@@ -384,17 +391,15 @@ function Dendrite(originCell = null, destinationCell, startX, startY, endX, endY
 	    ctx.lineWidth = this.highlighted ? 1 : 0.5;
 		// If this dendrite creates a feedback loop with another cell, then curve the dendrite lines
 		var loop = false;
-		// Iterate through the origin cell's input dendrites and see if any come from the current destination cell
-		if (this.originCell != null) {
-			for (let i = 0; i < this.originCell.inputDendrites.length; i++) {
-				if (this.originCell.inputDendrites[i].originCell == null) continue;
-				if (this.originCell.inputDendrites[i].originCell.deleted) continue;
-				if (this.originCell.inputDendrites[i].originCell.id === this.destinationCell.id) {
-					loop = true;
-					break;
-				}
+		// Does this dendrite create a loop between any two cells?
+		for (let i = 0; i < Dendrites.length; i++) {
+			if (Dendrites[i].deleted) continue;
+			if (Dendrites[i].originCell == null) continue;
+			if (Dendrites[i].originCell == this.destinationCell && Dendrites[i].destinationCell == this.originCell) {
+				loop = true;
+				break;
 			}
-		}	
+		}
 		if (loop) {
 			this.getArc();
 			ctx.beginPath();
@@ -424,6 +429,10 @@ function Dendrite(originCell = null, destinationCell, startX, startY, endX, endY
 
 	this.delete = function() {
 		this.deleted = true;
+	}
+
+	this.undelete = function() {
+		this.deleted = false;
 	}
 
 	this.highlight = function() {
@@ -511,26 +520,14 @@ function watch() {
 	document.getElementById("controlPoint").innerHTML = controlPoint;
 	document.getElementById("arcInfo").innerHTML = arcInfo;
 	document.getElementById("arrowInfo").innerHTML = arrowInfo;
-	// Count active cells
-	var activeTemp = 0;
-	var firingTemp = 0;
-	for (let i = 0; i < Cells.length; i++) {
-		if (Cells[i].deleted) continue;
-		if (Cells[i].active) activeTemp++;
-		if (Cells[i].firing) firingTemp++;
-	}
-	activeCellCount = activeTemp;
-	firingCellCount = firingTemp;
-	// If there is activity in the mesh, then enable the pause button
-	document.getElementById("pauseActivity").disabled = activeCellCount ? false : true;
 	updateStatisticsTable();
 }
 
-function checkForCollision(x,y,radius = 0) {
+function checkForCollision(x, y, additionalRadius = 0) {
 	var collision = false;
-	for (var i = 0; i < Cells.length; i++) {
+	for (let i = 0; i < Cells.length; i++) {
 		if (Cells[i].deleted) continue;
-		if (distance(x, y, Cells[i].x, Cells[i].y) <= Cells[i].r + radius) {
+		if (distance(x, y, Cells[i].x, Cells[i].y) <= Cells[i].r + additionalRadius) {
 			// If the distance between the mouse and this cell's center is less than this cell's radius, then we have a collision.
 			collision = Cells[i];
 			break;
@@ -600,7 +597,10 @@ function workspaceMouseClick(event) {
 			} else {
 				if (countDendrites() < dendriteLimit) {
 					// If we're clicking on a different (non-selected) cell, then create a dendrite between the selected cell and this cell
-					addDendrite(Cells[selectedCell], collision, Cells[selectedCell].x, Cells[selectedCell].y, collision.x, collision.y);
+					newDendrite = addDendrite(Cells[selectedCell], collision, Cells[selectedCell].x, Cells[selectedCell].y, collision.x, collision.y);
+					if (newDendrite) {
+						undoStack.push(['undoAddDendrite', newDendrite]);
+					}
 				} else {
 					setTip('You\'ve added the maximum number of connections.', 5000);
 				}
@@ -618,21 +618,27 @@ function workspaceMouseClick(event) {
 		} else {
 			// If there's room, add a cell at the current mouse location
 			var newRadius = 20;
-			var canvasBufferMinimum = newRadius+highlightWidth+highlightOffset;
-			var canvasBufferMaximum = 500-newRadius-highlightWidth-highlightOffset;
-
-			if (x > canvasBufferMaximum || x < canvasBufferMinimum
-				|| y > canvasBufferMaximum || y < canvasBufferMinimum
-				|| checkForCollision(x,y,newRadius+interCellBuffer)) {
-				setTip("There is not enough room to place a cell here.", 5000);
+			var threshold = parseInt(document.getElementById("thresholdSetting").value);
+			var firepower = parseInt(document.getElementById("firepowerSetting").value);
+			var refactoryPeriod = parseInt(document.getElementById("refactoryPeriodSetting").value);
+			newCell = addCell(x, y, newRadius, threshold, firepower, refactoryPeriod);				
+			if (newCell) {
+				undoStack.push(['undoAddCell', newCell]);				
 			} else {
-				var threshold = parseInt(document.getElementById("thresholdSetting").value);
-				var firepower = parseInt(document.getElementById("firepowerSetting").value);
-				var refactoryPeriod = parseInt(document.getElementById("refactoryPeriodSetting").value);
-				addCell(x, y, newRadius, threshold, firepower, refactoryPeriod);
+				setTip("There is not enough room to place a cell here.", 5000);
 			}
 		}
 	}
+}
+
+function checkForRoom(x, y, r) {
+	// Checks if there is room for a cell of radius r and point x,y
+	// Returns true of there is room, false if not.
+	var canvasBufferMinimum = r + highlightWidth + highlightOffset;
+	var canvasBufferMaximum = canvas.width - r - highlightWidth - highlightOffset;
+	return (x < canvasBufferMaximum	&& x > canvasBufferMinimum
+		 && y < canvasBufferMaximum && y > canvasBufferMinimum
+		 && !checkForCollision(x, y, r + interCellBuffer));
 }
 
 function workspaceMove(event) {
@@ -718,6 +724,13 @@ function updateRefactoryPeriodValue() {
 }
 
 function addDendrite(originCell = null, destinationCell, startX, startY, endX, endY) {
+	// If this dendrite already exists, don't create it again.
+	for (let i = 0; i < Dendrites.length; i++) {
+		if (Dendrites[i].deleted) continue;
+		if (Dendrites[i].originCell == originCell && Dendrites[i].destinationCell == destinationCell) {
+			return false;
+		}
+	}
 	// Create a new Dendrite object
 	var newDen = new Dendrite(originCell, destinationCell, startX, startY, endX, endY);
 	newDen.id = Dendrites.length;
@@ -730,36 +743,61 @@ function addDendrite(originCell = null, destinationCell, startX, startY, endX, e
 	destinationCell.inputDendrites.push(newDen);
 	updateCellInfoTable();
 	updateStatisticsTable();
+	return newDen;
 }
 
 function addCell(newCellX, newCellY, newRadius, newThreshold, newFirePower, refactoryPeriod, initialHighlight = true) {
 	// Check for collisions
-	collision = checkForCollision(newCellX, newCellY);
-	if (collision) {
+	if (checkForRoom(newCellX, newCellY, newRadius)) {	
+		// Create a new cell object	
+		var newCell = new Cell(newCellX, newCellY, newRadius, newThreshold, newFirePower, refactoryPeriod);
+		// Add the cell to the Cells array and update tables
+		newCell.id = Cells.length;
+		Cells.push(newCell);
+		updateCellInfoTable();
+		updateStatisticsTable();
+		if (initialHighlight) {
+			newCell.highlight();
+		}
+		return newCell;
+	} else {
 		return false;
 	}
-	// Create a new cell object	
-	var newCell = new Cell(newCellX, newCellY, newRadius, newThreshold, newFirePower, refactoryPeriod);
-
-	// Add the cell to the Cells array and draw it
-	newCell.id = Cells.length;
-	Cells.push(newCell);
-	updateCellInfoTable();
-	updateStatisticsTable();
-	if (initialHighlight) {
-		newCell.highlight();
-	}
-	return newCell;
 }
 
-function deleteCell() {
+function deleteCell(cellid, undoable = true) {
+	cell = Cells[cellid];
 	// Delete the currently selected cell (unless it's the first cell)
-	if (selectedCell !== 0) {
-		var cell = Cells[selectedCell];
-		cell.unselect();
-		cell.delete();
-		document.getElementById("contextMenu").style.display = "none";
+	cell.unselect();
+	cell.delete();
+	document.getElementById("deleteCell").style.display = "none";
+	if (undoable) {
+		undoStack.push(['undoDeleteCell', cell]);
 	}
+}
+
+function undo() {
+	// undo add cell; undo add dendrite
+	var task = undoStack.pop();
+	switch (task[0]) {
+		case 'undoDeleteCell':
+			if (checkForRoom(task[1].x, task[1].y, task[1].r)) {
+				task[1].undelete();
+			} else { 
+				setTip("There is not enough room to undelete this cell.", 5000);
+			}
+			break;
+		case 'undoAddCell':
+			deleteCell(task[1].id, false);
+			break;
+		case 'undoAddDendrite':
+			task[1].delete();
+			break;
+		default:
+			console.log('Attempted to undo an unrecognized action.');
+	}
+	updateCellInfoTable();
+	updateStatisticsTable();
 }
  
 function updateCellInfoTable(cellid = null, property = null, value = null) {
@@ -787,8 +825,8 @@ function updateCellInfoTable(cellid = null, property = null, value = null) {
 			row.insertCell(4).innerHTML = cell.threshold;
 			row.insertCell(5).innerHTML = cell.firePower;
 			row.insertCell(6).innerHTML = cell.refactoryPeriod;
-			row.insertCell(7).innerHTML = cell.inputDendrites.length;
-			row.insertCell(8).innerHTML = cell.outputDendrites.length;
+			row.insertCell(7).innerHTML = countDendrites(cell.inputDendrites);
+			row.insertCell(8).innerHTML = countDendrites(cell.outputDendrites);
 		}
 	} else if (cellid == null || property == null || value == null) {
 		console.log('Missing argument in updateCellInfoTable().');
@@ -817,7 +855,7 @@ function updateStatisticsTable() {
 	document.getElementById("meshActivity").innerHTML = Math.round(activeCellCount / countCells() * 100) + '%';
 }
 
-function drawIcon() {
+function drawIcon(color) {
 	// Draw the Mesh icon
 	var iconctx = document.getElementById("meshIcon").getContext('2d');
 	iconctx.clearRect(0,0,40,40);
@@ -827,7 +865,7 @@ function drawIcon() {
 	iconctx.fill();
 	iconctx.closePath();
 	iconctx.beginPath();
-	iconctx.fillStyle = firingCellCount ? fireColor : backgroundColor;
+	iconctx.fillStyle = color;
 	iconctx.moveTo(20,20);
 	iconctx.arc(20,20,15,-Math.PI/2,2*Math.PI/3);
 	iconctx.fill();
@@ -846,7 +884,23 @@ function draw() {
 		if (Cells[c].deleted) continue;
 		Cells[c].draw();
 	}
-	drawIcon();
+	// Count active cells
+	var activeTemp = 0;
+	var firingTemp = 0;
+	for (let i = 0; i < Cells.length; i++) {
+		if (Cells[i].deleted) continue;
+		if (Cells[i].active) activeTemp++;
+		if (Cells[i].firing) firingTemp++;
+	}
+	activeCellCount = activeTemp;
+	firingCellCount = firingTemp;
+	// Draw the Mesh icon
+	var color = firingCellCount ? fireColor	: backgroundColor;
+	drawIcon(color);
+	// If there is activity in the mesh, then enable the pause button
+	document.getElementById("pauseActivity").disabled = activeCellCount ? false : true;
+	// Enable the undo button if there is something to undo
+	document.getElementById("undo").disabled = !Boolean(undoStack.length);
 }
 
 function init() {
@@ -866,7 +920,8 @@ function init() {
 	document.getElementById("stepStimulate").addEventListener("click", function() { Cells[0].stimulate(1); });
 	document.getElementById("resetWorkspace").addEventListener("click", resetWorkspace);
 	document.getElementById("clearWorkspace").addEventListener("click", clearWorkspace);
-	document.getElementById("deleteCell").addEventListener("click", deleteCell);
+	document.getElementById("deleteCell").addEventListener("click", function() { if (selectedCell) deleteCell(selectedCell); } );
+	document.getElementById("undo").addEventListener("click", undo);
 	document.getElementById("thresholdSetting").addEventListener("change", updateThresholdValue);
 	document.getElementById("thresholdSetting").addEventListener("mousemove", updateThresholdValue);
 	document.getElementById("firepowerSetting").addEventListener("change", updateFirepowerValue);

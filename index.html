@@ -32,7 +32,10 @@
 			<p id="tip" class="w3-text-indigo w3-center w3-small">&nbsp;</p>
 			<div class="w3-border" style="position:relative;">
 
-				<div id="contextMenu"><button id="deleteCell" class="w3-btn w3-dark-gray contextMenuButton"><i class="material-icons">delete_forever</i></button></div>
+				<div id="contextMenu">
+					<button id="undo" class="contextMenuButton w3-btn w3-dark-gray"><i class="material-icons">undo</i></button>
+					<button id="deleteCell" class="contextMenuButton w3-btn w3-dark-gray" style="display:none;"><i class="material-icons">delete_forever</i></button>
+				</div>
 				<canvas id="workspace"></canvas>
 				
 				<div class="w3-bar w3-border-top">
