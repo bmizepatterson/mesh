@@ -944,12 +944,14 @@ function drawGraph() {
 	// graphctx.rect(graphArea[0],graphArea[1],graphArea[2],graphArea[3]);
 	// graphctx.stroke();
 	// graphctx.closePath();
+
 	// Draw x-axis
-	// Draw y-axis
+
+	// Draw y-axis gridlines
 	graphctx.strokeStyle = '#CCC';
 	graphctx.lineWidth = 1;
 	var tickSpace = Math.round(graphArea[3]/4);
-	for (let y = graphArea[1]; y <= graphArea[1] + graphArea[3]; y = y + tickSpace) {
+	for (let y = graphArea[1]; y <= graphArea[1] + graphArea[3] - tickSpace; y = y + tickSpace) {
 		graphctx.beginPath();
 		graphctx.moveTo(0, y);
 		graphctx.lineTo(graph.width, y);
