@@ -87,4 +87,5 @@ button {
 }
 @media (max-width:800px) {
 	.w3-mobile{display:block;width:100%!important;float:none;}
+	.meshPanel{margin-top:20px;}
 }
