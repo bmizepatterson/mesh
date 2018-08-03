@@ -2,14 +2,13 @@ var				   canvas = document.getElementById('workspace'),
 					  ctx = canvas.getContext("2d"),
 				    graph = document.getElementById('graph');
 		  	     graphctx = graph.getContext("2d");
-		   graphMidpointX = Math.round(graph.width/2),
 		   		graphArea = [],
 		   	  graphPoints = [],
 		   	   graphDialX = 0,
 	  recordingInProgress = false;
 			    undoStack = [],
 	stimulationInProgress = false,	// False or the timer ID of the stimulation in progress
-		  drawingDendrite = false,
+		  	   movingCell = false;
  		  activeCellCount = 0,
 		  firingCellCount = 0,
 		  highlightedCell = -1,
@@ -39,8 +38,8 @@ var				   canvas = document.getElementById('workspace'),
 
 // Object constructors
 function Cell(x, y, r, threshold, firePower, refactoryPeriod) {
-	this.x = x;
-	this.y = y;
+	this.x = this.oldX = x;
+	this.y = this.oldY = y;
 	this.r = r;
 	this.threshold = threshold;	// Input needed before the cell will fire
 	this.potential = 0;			// Input that has been collected so far
@@ -191,7 +190,6 @@ function Cell(x, y, r, threshold, firePower, refactoryPeriod) {
 		// Set selected flags
 		selectedCell = this.id;
 		this.selected = true;
-		drawingDendrite = true;
 		// Highlight all output dendrites as well
 		for (let i = 0; i < this.outputDendrites.length; i++) {
 			if (this.outputDendrites[i].deleted) continue;
@@ -213,7 +211,6 @@ function Cell(x, y, r, threshold, firePower, refactoryPeriod) {
 		// Set selected flags
 		selectedCell = -1;
 		this.selected = false;
-		drawingDendrite = false;
 		// Unhighlight all output dendrites as well
 		for (let i = 0; i < this.outputDendrites.length; i++) {
 			if (this.outputDendrites[i].deleted) continue;
@@ -303,7 +300,7 @@ function Dendrite(originCell = null, destinationCell, startX, startY, endX, endY
 			console.log('Unable to calculate arrow coordinates of dendrite #'+this.id+'. (Arrow width cannot be zero.)');
 			return false;
 		}
-		if (this.arrowCoords == null) {
+		// if (this.arrowCoords == null) {
 			// Find the coordinates of the point of the arrow, which lies on the circumference of the destination cell
 			var theta = Math.atan2(this.startY-this.endY, this.startX-this.endX);
 			var Px = Math.round(this.destinationCell.r * Math.cos(theta) + this.endX);
@@ -314,7 +311,7 @@ function Dendrite(originCell = null, destinationCell, startX, startY, endX, endY
 		    var x2 = Math.round(Px-arrowWidth*Math.cos(angle+Math.PI/6));
 		    var y2 = Math.round(Py-arrowWidth*Math.sin(angle+Math.PI/6));
 			this.arrowCoords = [x1,y1,Px,Py,x2,y2];
-		}
+		// }
 		return this.arrowCoords;
 	}
 
@@ -322,7 +319,7 @@ function Dendrite(originCell = null, destinationCell, startX, startY, endX, endY
 		// Calculate (if needed) the coordinates of the control point needed for drawing the arc between two cells in a lopp
 		// Uses global curveWidth variable
 		// Returns the coordinates in an array [x, y].
-		if (this.controlPoint == null) {
+		// if (this.controlPoint == null) {
 			var x, y, startX;
 			// The formulas below only work when the dendrite line is not vertical (startX and midpointX are the same);
 			// So cheat. If it's vertical then pretend that startX is 1 pixel to the left.
@@ -342,14 +339,14 @@ function Dendrite(originCell = null, destinationCell, startX, startY, endX, endY
 				y = Math.round(this.midpointY + (curveWidth * Math.cos(Math.PI/2 - Math.asin(2*(this.startX-this.midpointX)/this.length))));
 			}			
 			this.controlPoint = [x, y];
-		}
+		// }
 		return this.controlPoint;
 	}
 
 	this.getArc = function() {
 		// Calculate (if needed) the coordinates and radius of the arc to draw between two cells
 		// Returns the coordinates in an array [x, y, radius].
-		if (this.arc == null) {
+		// if (this.arc == null) {
 			// Define vertices of triangle ABC with circumcenter P
 			var Ax, Ay, Bx, By, Cx, Cy, Px, Py, Pr;
 			var Ax2, Ay2, Bx2, By2, Cx2, Cy2;	// i.e. 'Ax squared', etc. For making the formula more readable. Hopefully.
@@ -385,7 +382,7 @@ function Dendrite(originCell = null, destinationCell, startX, startY, endX, endY
 			startAngle = Math.atan2(Ay - Py, Ax - Px);
 			endAngle = Math.atan2(By - Py, Bx - Px);
 			this.arc = [Px, Py, Pr, startAngle, endAngle];
-		}
+		// }
 		return this.arc;
 	}
 
@@ -522,19 +519,43 @@ function watch() {
 	document.getElementById("controlPoint").innerHTML = controlPoint;
 	document.getElementById("arcInfo").innerHTML = arcInfo;
 	document.getElementById("arrowInfo").innerHTML = arrowInfo;
+	var tempMovingCell = movingCell;
+	if (tempMovingCell instanceof Cell) {
+		var inDens = '';
+		for (let k = 0; k < tempMovingCell.inputDendrites.length; k++) {
+			inDens += tempMovingCell.inputDendrites[k].id + ', ';
+		}
+		tempMovingCell = tempMovingCell.id + ': ' + inDens;
+	}
+	document.getElementById("movingCell").innerHTML = tempMovingCell;
 }
 
-function checkForCollision(x, y, additionalRadius = 0) {
+function checkForCollision(x, y, additionalRadius = 0, ignoreCellID = -1) {
 	var collision = false;
 	for (let i = 0; i < Cells.length; i++) {
 		if (Cells[i].deleted) continue;
 		if (distance(x, y, Cells[i].x, Cells[i].y) <= Cells[i].r + additionalRadius) {
 			// If the distance between the mouse and this cell's center is less than this cell's radius, then we have a collision.
-			collision = Cells[i];
-			break;
+			if (ignoreCellID > -1 && Cells[i].id === ignoreCellID) {
+				// Ignore this collision
+				continue;
+			} else {
+				collision = Cells[i];
+				break;
+			}
 		}
 	}
 	return collision;
+}
+
+function checkForRoom(x, y, r, ignoreCellID = -1) {
+	// Checks if there is room for a cell of radius r and point x,y, including all cell buffers
+	// Returns true of there is room, false if not.
+	var canvasBufferMinimum = r + highlightWidth + highlightOffset;
+	var canvasBufferMaximum = canvas.width - r - highlightWidth - highlightOffset;
+	return (x < canvasBufferMaximum	&& x > canvasBufferMinimum
+		 	&& y < canvasBufferMaximum && y > canvasBufferMinimum
+		 	&& !checkForCollision(x, y, r + interCellBuffer, ignoreCellID));	
 }
 
 function setTip(text = '', time = 0) {
@@ -593,17 +614,27 @@ function resetWorkspace() {
 	graphPoints = [];
 }
 
-function workspaceMouseClick(event) {
+function workspaceMouseDown(event) {
+	var x = event.clientX - canvas.parentElement.offsetLeft + window.pageXOffset;
+	var y = event.clientY - canvas.parentElement.offsetTop + window.pageYOffset;
+	// Are we clicking on a cell body?
+	var collision = checkForCollision(x,y);
+	if (collision instanceof Cell && collision.id > 0) {
+		movingCell = collision;
+		movingCell.oldX = collision.x;
+		movingCell.oldY = collision.y;			
+	}
+}
+
+function workspaceMouseUp(event) {
 	if (showingTip) {
 		setTip();
 		return;
 	}
 	var x = event.clientX - canvas.parentElement.offsetLeft + window.pageXOffset;
 	var y = event.clientY - canvas.parentElement.offsetTop + window.pageYOffset;
-	// Are we clicking on a cell body?
 	var collision = checkForCollision(x,y);
-
-	if (drawingDendrite) {
+	if (selectedCell > -1) {
 		if (collision instanceof Cell) {
 			if (collision.selected) {
 				// If we're clicking on the original (selected) cell, then deselect it
@@ -619,41 +650,31 @@ function workspaceMouseClick(event) {
 				} else {
 					setTip('You\'ve added the maximum number of connections.', 5000);
 				}
-				// Unselect (but don't highlight) the selected cell
-				Cells[selectedCell].unselect();
+				// Unselect (but don't highlight) the selected cell				
+				Cells[selectedCell].unselect();				
 			}
 		} else {
 			// Deselect the selected cell
 			Cells[selectedCell].unselect();
 		}
+	} else if (collision instanceof Cell) {
+		if (collision.x === collision.oldX && collision.y === collision.oldY) {
+			collision.select();
+		}
 	} else {
-		if (collision instanceof Cell) {
-			// Select the cell and enter dendrite-drawing mode
-			collision.select();			
+		// If there's room, add a cell at the current mouse location
+		var newRadius = 20;
+		var threshold = parseInt(document.getElementById("thresholdSetting").value);
+		var firepower = parseInt(document.getElementById("firepowerSetting").value);
+		var refactoryPeriod = parseInt(document.getElementById("refactoryPeriodSetting").value);
+		newCell = addCell(x, y, newRadius, threshold, firepower, refactoryPeriod);				
+		if (newCell) {
+			undoStack.push(['undoAddCell', newCell]);				
 		} else {
-			// If there's room, add a cell at the current mouse location
-			var newRadius = 20;
-			var threshold = parseInt(document.getElementById("thresholdSetting").value);
-			var firepower = parseInt(document.getElementById("firepowerSetting").value);
-			var refactoryPeriod = parseInt(document.getElementById("refactoryPeriodSetting").value);
-			newCell = addCell(x, y, newRadius, threshold, firepower, refactoryPeriod);				
-			if (newCell) {
-				undoStack.push(['undoAddCell', newCell]);				
-			} else {
-				setTip("There is not enough room to place a cell here.", 5000);
-			}
+			setTip("There is not enough room to place a cell here.", 5000);
 		}
 	}
-}
-
-function checkForRoom(x, y, r) {
-	// Checks if there is room for a cell of radius r and point x,y
-	// Returns true of there is room, false if not.
-	var canvasBufferMinimum = r + highlightWidth + highlightOffset;
-	var canvasBufferMaximum = canvas.width - r - highlightWidth - highlightOffset;
-	return (x < canvasBufferMaximum	&& x > canvasBufferMinimum
-		 && y < canvasBufferMaximum && y > canvasBufferMinimum
-		 && !checkForCollision(x, y, r + interCellBuffer));
+	movingCell = false;
 }
 
 function workspaceMove(event) {
@@ -661,6 +682,19 @@ function workspaceMove(event) {
 	var x = event.clientX - canvas.parentElement.offsetLeft + window.pageXOffset;
     var y = event.clientY - canvas.parentElement.offsetTop + window.pageYOffset;
     document.getElementById("mousecoords").innerHTML = "(" + x + ", " + y + ")";
+    if (movingCell && checkForRoom(x, y, movingCell.r, movingCell.id)) {
+    	movingCell.x = x; movingCell.y = y;
+    	for (let i = 0; i < movingCell.inputDendrites.length; i++) {
+    		let dendrite = Dendrites[movingCell.inputDendrites[i].id];
+    		dendrite.endX = x;
+    		dendrite.endY = y;
+    	}
+    	for (let i = 0; i < movingCell.outputDendrites.length; i++) {
+    		let dendrite = Dendrites[movingCell.outputDendrites[i].id];
+    		dendrite.startX = x;
+    		dendrite.startY = y;
+    	}
+    }
 	// Check for collision with a cell body. 
 	var collision = checkForCollision(x,y);
 	if (!collision) {
@@ -681,6 +715,7 @@ function workspaceMoveOut(event) {
 	if (highlightedCell > -1) {
 		Cells[highlightedCell].unhighlight();
 	}
+	movingCell = false;
 }
 
 function clickStimulateButton() {	
@@ -869,7 +904,7 @@ function updateStatisticsTable() {
 	document.getElementById("totalDendrites").innerHTML = countDendrites();
 	document.getElementById("totalFires").innerHTML = fireCount;
 	document.getElementById("totalStimulations").innerHTML = stimulationCount;
-	document.getElementById("meshActivity").innerHTML = Math.round(activeCellCount / countCells() * 250) + '%';
+	document.getElementById("meshActivity").innerHTML = Math.round(activeCellCount / countCells() * 100) + '%';
 }
 
 function drawIcon(color) {
@@ -890,7 +925,7 @@ function drawIcon(color) {
 }
 
 function startRecord() {
-	recordingInProgress = window.setInterval(record, 100);
+	recordingInProgress = window.setInterval(record, 10);
 }
 
 function stopRecord() {
@@ -904,19 +939,30 @@ function record(startTime) {
 
 function drawGraph() {
 	graphctx.clearRect(0,0,graph.width,graph.height);
+	// graphctx.strokeStyle='yellow';
+	// graphctx.moveTo(graphArea[0],graphArea[1]);
+	// graphctx.rect(graphArea[0],graphArea[1],graphArea[2],graphArea[3]);
+	// graphctx.stroke();
+	// graphctx.closePath();
 	// Draw x-axis
 	// Draw y-axis
 	graphctx.strokeStyle = '#CCC';
 	graphctx.lineWidth = 1;
 	var tickSpace = Math.round(graphArea[3]/4);
-	for (let j = 1, y = tickSpace + graphArea[1]; y < graphArea[1] + graphArea[3]; y = y + tickSpace, j++) {
-		let width = (j == 2 ? 20 : 10);
+	for (let y = graphArea[1]; y <= graphArea[1] + graphArea[3]; y = y + tickSpace) {
 		graphctx.beginPath();
 		graphctx.moveTo(0, y);
 		graphctx.lineTo(graph.width, y);
 		graphctx.stroke();
 		graphctx.closePath();
 	}
+	graphctx.fillStyle = '#CCC';
+	graphctx.moveTo(0, graphArea[1]);
+	graphctx.font = '10px Verdana';
+	graphctx.fillText('100%', 0, graphArea[1]+10);
+	graphctx.fillText('75%', 0, graphArea[1]+tickSpace+10);
+	graphctx.fillText('50%', 0, graphArea[1]+2*tickSpace+10);
+	graphctx.fillText('25%', 0, graphArea[1]+3*tickSpace+10);
 	// Draw graph points
 	graphctx.strokeStyle = selectColor;
 	graphctx.lineWidth = 1;
@@ -928,17 +974,17 @@ function drawGraph() {
 			point2[0] = point2[0] - 0.5;
 		}
 		graphctx.beginPath();
-		graphctx.moveTo(point1[0], graphArea[3]-point1[1]);
-		graphctx.lineTo(point2[0], graphArea[3]-point2[1]);
+		graphctx.moveTo(point1[0], graphArea[1]+graphArea[3]-point1[1]);
+		graphctx.lineTo(point2[0], graphArea[1]+graphArea[3]-point2[1]);
 		graphctx.stroke();
 		graphctx.closePath();
 	}
 	// Draw graph dial
 	graphctx.strokeStyle = 'red';
-	graphctx.lineWidth = 1;
+	graphctx.lineWidth = 2;
 	graphctx.beginPath();
-	graphctx.moveTo(graphDialX,0);
-	graphctx.lineTo(graphDialX, graphArea[3]);
+	graphctx.moveTo(graphDialX, 0);
+	graphctx.lineTo(graphDialX, graphArea[0]+graphArea[3]);
 	graphctx.stroke();
 	graphctx.closePath();
 	if (recordingInProgress && graphDialX < graphArea[2]) {
@@ -981,8 +1027,7 @@ function resize() {
 	graph.width = graph.parentElement.clientWidth;
 	graph.height = 150;
 	// Graph area rectangle defined by startX, startY, width, height 
-	graphArea = [20, 0, graph.width-20, graph.height-10];
-	graphMidpointX = Math.round(graphArea[2] / 2);
+	graphArea = [32, 5, graph.width-32, graph.height-5];
 }
 
 function init() {
@@ -991,7 +1036,8 @@ function init() {
 	
 	// Add event listeners
 	window.addEventListener("resize", resize);
-	canvas.addEventListener("click", workspaceMouseClick);
+	canvas.addEventListener("mousedown", workspaceMouseDown);
+	canvas.addEventListener("mouseup", workspaceMouseUp);
 	canvas.addEventListener("mousemove", workspaceMove);
 	canvas.addEventListener("mouseout", workspaceMoveOut);
 	document.getElementById("tip").addEventListener("click", function() { setTip(); } );
