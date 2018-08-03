@@ -995,7 +995,7 @@ function drawGraph() {
 }
 
 function draw() {
-	ctx.clearRect(0, 0, 500, 500);
+	ctx.clearRect(0, 0, canvas.width, canvas.height);
 	// Draw all dendrites
 	for (let d = 0; d < Dendrites.length; d++) {
 		if (Dendrites[d].deleted) continue;

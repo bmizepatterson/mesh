@@ -2,6 +2,9 @@ html, body, div, canvas {
 	margin:0;
 	padding:0;
 }
+body {
+	background-color: #f5f5f5;
+}
 canvas {
 	display:block;
 }
@@ -38,6 +41,7 @@ button {
 }
 #graphWrapper {
 	margin-top:20px;
+	background-color: #fff;
 }
 #graphWrapper p {
 	font-size: 12px;
@@ -87,6 +91,9 @@ button {
 	margin-right:4px;
 	padding: 8px 8px 4px 8px;
 	float:left;
+}
+.meshPanel table {
+	background-color: #fff;
 }
 .w3-table.compact td {
 	padding-top:4px;
