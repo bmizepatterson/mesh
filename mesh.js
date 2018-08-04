@@ -370,12 +370,6 @@ function Dendrite(originCell = null, destinationCell, startX, startY, endX, endY
 		Px = Math.round(Px);
 		startAngle = Math.atan2(Ay - Py, Ax - Px);
 		endAngle = Math.atan2(By - Py, Bx - Px);
-
-		ctx.beginPath();
-		ctx.moveTo(Px, Py);
-		ctx.arc(Px,Py, 3, 0, 2*Math.PI);
-		ctx.fill();
-		ctx.closePath();
 		this.arc = [Px, Py, Pr, startAngle, endAngle];
 		return this.arc;
 	}
