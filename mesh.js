@@ -320,14 +320,7 @@ function Dendrite(originCell = null, destinationCell, startX, startY, endX, endY
 		// Uses global curveWidth variable
 		// Returns the coordinates in an array [x, y].
 		var x, y, startX;
-		if (this.startX === this.endY) {
-			if (this.startY < this.endY) {
-				x = this.startX + curveWidth;
-			} else {
-				x = this.startX - curveWidth;
-			}
-			y = this.midpointY;
-		} else if (this.startY < this.endY) {
+		if (this.startY < this.endY) {
 			x = Math.round(this.midpointX + (curveWidth * Math.sin(Math.PI/2 - Math.asin(2*(this.startX-this.midpointX)/this.length))));
 			y = Math.round(this.midpointY + (curveWidth * Math.cos(Math.PI/2 - Math.asin(2*(this.startX-this.midpointX)/this.length))));
 		} else {
@@ -354,9 +347,10 @@ function Dendrite(originCell = null, destinationCell, startX, startY, endX, endY
 			// We've got a vertical line. The formula for calculating Px returns undefined when Ax==Bx, since 2(Bx-Ax) is the denominator.
 			// So, rotate the entire triangle ABC by 90 degrees on the midpoint of AB, so we're not working with a vertical line anymore.
 			oldAx = Ax; oldAy = Ay; oldBx = Bx; oldBy = By;
-			var newStartPoint = rotate(this.startX, this.startY, this.midpointX, this.midpointY, Math.PI/2);
-			var newEndPoint = rotate(this.endX, this.endY, this.midpointX, this.midpointY, Math.PI/2);
-			var newControlPoint = rotate(Cx, Cy, this.midpointX, this.midpointY, Math.PI/2);
+			var rotation = Math.PI/10;
+			var newStartPoint = rotate(this.startX, this.startY, this.midpointX, this.midpointY, rotation);
+			var newEndPoint = rotate(this.endX, this.endY, this.midpointX, this.midpointY, rotation);
+			var newControlPoint = rotate(Cx, Cy, this.midpointX, this.midpointY, rotation);
 			Ax = newStartPoint[0]; Ay = newStartPoint[1]; Ax2 = Ax*Ax; Ay2 = Ay*Ay;
 			Bx = newEndPoint[0]; By = newEndPoint[1]; Bx2 = Bx*Bx; By2 = By*By;
 			Cx = newControlPoint[0]; Cy = newControlPoint[1]; Cx2 = Cx*Cx; Cy2 = Cy*Cy;
@@ -364,7 +358,7 @@ function Dendrite(originCell = null, destinationCell, startX, startY, endX, endY
 			Px = ( (Bx2+By2-Ax2-Ay2) - (2 * Py * (By-Ay) ) ) / ( 2 * (Bx-Ax) );
 			// Rotate everything back -90 degrees.
 			Ax = oldAx; Ay = oldAy; Bx = oldBx; By = oldBy;
-			var P = rotate(Px, Py, this.midpointX, this.midpointY, -Math.PI/2);
+			var P = rotate(Px, Py, this.midpointX, this.midpointY, -rotation);
 			Px = P[0]; Py = P[1];
 		} else {
 			// Calculate the coordinates of the center point P of the arc
@@ -376,6 +370,12 @@ function Dendrite(originCell = null, destinationCell, startX, startY, endX, endY
 		Px = Math.round(Px);
 		startAngle = Math.atan2(Ay - Py, Ax - Px);
 		endAngle = Math.atan2(By - Py, Bx - Px);
+
+		ctx.beginPath();
+		ctx.moveTo(Px, Py);
+		ctx.arc(Px,Py, 3, 0, 2*Math.PI);
+		ctx.fill();
+		ctx.closePath();
 		this.arc = [Px, Py, Pr, startAngle, endAngle];
 		return this.arc;
 	}
