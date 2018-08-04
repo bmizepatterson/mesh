@@ -264,6 +264,13 @@ function Cell(x, y, r, threshold, firePower, refactoryPeriod) {
 
 	this.undelete = function() {
 		this.deleted = false;
+		// Unelete all input/output dendrites
+		for (var i = 0; i < this.inputDendrites.length; i++) {
+			this.inputDendrites[i].undelete();
+		}
+		for (var i = 0; i < this.outputDendrites.length; i++) {
+			this.outputDendrites[i].undelete();
+		}
 		updateCellInfoTable();
 	}
 
