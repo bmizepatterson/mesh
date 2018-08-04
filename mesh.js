@@ -441,6 +441,21 @@ function Dendrite(originCell = null, destinationCell, startX, startY, endX, endY
 		this.highlighted = false;
 		highlightedDendrite = -1;
 	}
+
+	this.moveStart = function (startX, startY) {
+		// Move the start point for this line/arc
+		this.startX = startX; this.startY = startY;
+		this.length = distance(this.startX, this.startY, this.endX, this.endY);
+		this.midpointX = (startX + endX) / 2;
+		this.midpointY = (startY + endY) / 2;
+	}
+	this.moveEnd = function (endX, endY) {
+		// Move the ned point for this line/arc
+		this.endX = endX; this.endY = endY;
+		this.length = distance(this.startX, this.startY, this.endX, this.endY);
+		this.midpointX = (startX + endX) / 2;
+		this.midpointY = (startY + endY) / 2;
+	}
 }
 
 function countCells(includeDeleted = false) {
@@ -687,13 +702,11 @@ function workspaceMove(event) {
     	movingCell.x = x; movingCell.y = y;
     	for (let i = 0; i < movingCell.inputDendrites.length; i++) {
     		let dendrite = Dendrites[movingCell.inputDendrites[i].id];
-    		dendrite.endX = x;
-    		dendrite.endY = y;
+    		dendrite.moveEnd(x, y);
     	}
     	for (let i = 0; i < movingCell.outputDendrites.length; i++) {
     		let dendrite = Dendrites[movingCell.outputDendrites[i].id];
-    		dendrite.startX = x;
-    		dendrite.startY = y;
+    		dendrite.moveStart(x, y);
     	}
     	updateCellInfoTable(movingCell.id, 'position', [movingCell.x, movingCell.y]);
     }
@@ -855,13 +868,11 @@ function undo() {
 		    	task[1].y = oldPosition[1];
 		    	for (let i = 0; i < task[1].inputDendrites.length; i++) {
 		    		let dendrite = Dendrites[task[1].inputDendrites[i].id];
-		    		dendrite.endX = oldPosition[0];
-		    		dendrite.endY = oldPosition[1];
+		    		dendrite.moveEnd(oldPosition[0], oldPosition[1]);
 		    	}
 		    	for (let i = 0; i < task[1].outputDendrites.length; i++) {
 		    		let dendrite = Dendrites[task[1].outputDendrites[i].id];
-		    		dendrite.startX = oldPosition[0];
-		    		dendrite.startY = oldPosition[1];
+		    		dendrite.moveStart(oldPosition[0], oldPosition[1]);
 		    	}
     		}
 			break;
