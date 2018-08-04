@@ -5,6 +5,7 @@ var				   canvas = document.getElementById('workspace'),
 		   		graphArea = [],
 		   	  graphPoints = [],
 		   	   graphDialX = 0,
+		   	   timeLables = [],
 	  recordingInProgress = false;
 			    undoStack = [],
 	stimulationInProgress = false,	// False or the timer ID of the stimulation in progress
@@ -583,6 +584,7 @@ function clearWorkspace() {
 	Cells = [];
 	Dendrites = [];
 	undoStack = [];
+	timeLables = [];
 	setupWorkspace();
 }
 
@@ -957,12 +959,18 @@ function drawIcon(color) {
 }
 
 function startRecord() {
+	
 	recordingInProgress = window.setInterval(record, 10);
+	timeLabelTimer = window.setInterval(function() { 
+		timeLables.push(graphDialX);
+		document.getElementById('timeLabel').innerHTML = timeLables[timeLables.length-1];
+	} , 1000);
 }
 
 function stopRecord() {
 	clearInterval(recordingInProgress);
-	recordingInProgress = false;	
+	clearInterval(timeLabelTimer);
+	recordingInProgress = false;
 }
 
 function record() {
@@ -977,10 +985,25 @@ function drawGraph() {
 	// graphctx.stroke();
 	// graphctx.closePath();
 
-	// Draw x-axis
+	// Draw x-axis lables
+	graphctx.font = '10px Verdana';
+	graphctx.fillStyle = '#AAA';
+	graphctx.textAlign = 'center';
+	graphctx.strokeStyle = '#AAA';
+	graphctx.lineWidth = 1;
+
+
+	for (let t = 0; t < timeLables.length; t++) {
+		graphctx.fillText(t+1, timeLables[t], graph.height-5.5);
+		graphctx.moveTo(timeLables[t], graph.height-15);
+		graphctx.lineTo(timeLables[t], graph.height-20);
+		graphctx.stroke();
+		if (recordingInProgress && graphDialX >= graphArea[2]) {
+			timeLables[t]--;
+		}
+	}
 
 	// Draw y-axis gridlines
-	graphctx.lineWidth = 1;
 	var tickSpace = Math.round(graphArea[3]/4);
 	for (let j = 1, y = graphArea[1]; y <= graphArea[1] + graphArea[3]; y = y + tickSpace, j++) {
 		graphctx.beginPath();
@@ -997,16 +1020,16 @@ function drawGraph() {
 		graphctx.stroke();
 		graphctx.closePath();
 	}
-	graphctx.fillStyle = '#AAA';
+	graphctx.textAlign = 'left';
 	graphctx.moveTo(0, graphArea[1]);
-	graphctx.font = '10px Verdana';
 	graphctx.fillText('100%', 0.5, graphArea[1]+10.5);
 	graphctx.fillText('75%', 0.5, graphArea[1]+tickSpace+10.5);
 	graphctx.fillText('50%', 0.5, graphArea[1]+2*tickSpace+10.5);
 	graphctx.fillText('25%', 0.5, graphArea[1]+3*tickSpace+10.5);
+
 	// Draw graph points
 	graphctx.strokeStyle = selectColor;
-	graphctx.lineWidth = 1;
+	graphctx.lineWidth = 2;
 	for (let i = 0; i < graphPoints.length-1; i++) {
 		let point1 = graphPoints[i];
 		let point2 = graphPoints[i+1];
@@ -1028,6 +1051,7 @@ function drawGraph() {
 	graphctx.lineTo(graphDialX, graphArea[1]+graphArea[3]);
 	graphctx.stroke();
 	graphctx.closePath();
+
 	if (recordingInProgress && graphDialX < graphArea[2]) {
 		graphDialX++;
 	}
