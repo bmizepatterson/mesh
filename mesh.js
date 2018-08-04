@@ -381,7 +381,7 @@ function Dendrite(originCell = null, destinationCell, startX, startY, endX, endY
 
 	this.draw = function() {
 	    ctx.strokeStyle = ctx.fillStyle = this.highlighted ? selectColor : dendriteColor;
-	    ctx.lineWidth = this.highlighted ? 1 : 0.5;
+	    ctx.lineWidth = this.highlighted ? 2 : 1;
 		// If this dendrite creates a feedback loop with another cell, then curve the dendrite lines
 		var loop = false;
 		// Does this dendrite create a loop between any two cells?
@@ -400,9 +400,16 @@ function Dendrite(originCell = null, destinationCell, startX, startY, endX, endY
 			ctx.stroke();
 			ctx.closePath();
 		} else {
+			var apparentStartX = this.startX; apparentStartY = this.startY;
+			var apparentEndX = this.endX; apparentEndY = this.endY;
+			// If the line is vertical or horizontal we have to be careful that canvas doesn't draw it blurry when the lineWidth is odd.
+			if (ctx.lineWidth % 2) {
+				if (this.startX === this.endX) apparentStartX = this.startX - 0.5;				
+				if (this.startY === this.endY) apparentStartY = this.startY - 0.5;
+			}
 			ctx.beginPath();
-			ctx.moveTo(this.startX, this.startY);
-		    ctx.lineTo(this.endX, this.endY);
+			ctx.moveTo(apparentStartX, apparentStartY);
+		    ctx.lineTo(apparentEndX, apparentEndY);
 		    ctx.stroke();
 		    ctx.closePath();
 			// Draw arrow
@@ -958,7 +965,7 @@ function stopRecord() {
 	recordingInProgress = false;	
 }
 
-function record(startTime) {
+function record() {
 	graphPoints.push([graphDialX, activeCellCount / countCells() * graphArea[3]]);
 }
 
@@ -973,23 +980,30 @@ function drawGraph() {
 	// Draw x-axis
 
 	// Draw y-axis gridlines
-	graphctx.strokeStyle = '#CCC';
 	graphctx.lineWidth = 1;
 	var tickSpace = Math.round(graphArea[3]/4);
-	for (let y = graphArea[1]; y <= graphArea[1] + graphArea[3] - tickSpace; y = y + tickSpace) {
+	for (let j = 1, y = graphArea[1]; y <= graphArea[1] + graphArea[3]; y = y + tickSpace, j++) {
 		graphctx.beginPath();
+		if (j === 5) {
+			graphctx.strokeStyle = '#555';
+			y = Math.ceil(y) + 0.5;	
+		} else {
+			graphctx.strokeStyle = '#CCC';
+			y = Math.ceil(y) - 0.5;
+		}
+		// Make sure to draw the line BETWEEN pixels; otherwise canvas makes the line blurry.
 		graphctx.moveTo(0, y);
 		graphctx.lineTo(graph.width, y);
 		graphctx.stroke();
 		graphctx.closePath();
 	}
-	graphctx.fillStyle = '#CCC';
+	graphctx.fillStyle = '#AAA';
 	graphctx.moveTo(0, graphArea[1]);
 	graphctx.font = '10px Verdana';
-	graphctx.fillText('100%', 0, graphArea[1]+10);
-	graphctx.fillText('75%', 0, graphArea[1]+tickSpace+10);
-	graphctx.fillText('50%', 0, graphArea[1]+2*tickSpace+10);
-	graphctx.fillText('25%', 0, graphArea[1]+3*tickSpace+10);
+	graphctx.fillText('100%', 0.5, graphArea[1]+10.5);
+	graphctx.fillText('75%', 0.5, graphArea[1]+tickSpace+10.5);
+	graphctx.fillText('50%', 0.5, graphArea[1]+2*tickSpace+10.5);
+	graphctx.fillText('25%', 0.5, graphArea[1]+3*tickSpace+10.5);
 	// Draw graph points
 	graphctx.strokeStyle = selectColor;
 	graphctx.lineWidth = 1;
@@ -1008,10 +1022,10 @@ function drawGraph() {
 	}
 	// Draw graph dial
 	graphctx.strokeStyle = 'red';
-	graphctx.lineWidth = 2;
+	graphctx.lineWidth = 1;
 	graphctx.beginPath();
 	graphctx.moveTo(graphDialX, 0);
-	graphctx.lineTo(graphDialX, graphArea[0]+graphArea[3]);
+	graphctx.lineTo(graphDialX, graphArea[1]+graphArea[3]);
 	graphctx.stroke();
 	graphctx.closePath();
 	if (recordingInProgress && graphDialX < graphArea[2]) {
@@ -1061,7 +1075,7 @@ function resize() {
 	graph.width = graph.parentElement.clientWidth;
 	graph.height = 150;
 	// Graph area rectangle defined by startX, startY, width, height 
-	graphArea = [32, 5, graph.width-32, graph.height-5];
+	graphArea = [32, 5, graph.width-32, graph.height-25];
 }
 
 function init() {
@@ -1108,7 +1122,7 @@ function init() {
 
 	setupWorkspace();	
 	resize();
-	graphDialX = graphArea[0];
+	graphDialX = graphArea[0]+0.5;
 };
 
 window.requestAnimFrame = (function(){
