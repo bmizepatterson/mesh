@@ -461,7 +461,7 @@ function ActivityGraph(canvasElement) {
 	this.dialX = 0;
 	this.timeLables = [];
 	this.recordingInProgress = false;
-	this.timeLabelTimer = false;
+	this.recordTimer = 0;
 
 	this.init = function() {
 		this.resize();
@@ -484,7 +484,9 @@ function ActivityGraph(canvasElement) {
 		this.graphctx.strokeStyle = '#AAA';
 		this.graphctx.lineWidth = 1;
 		for (let t = 0; t < this.timeLables.length; t++) {
-			this.graphctx.fillText(t+1, this.timeLables[t], this.canvasElement.height-5.5);
+			let minutes = Math.floor( (t+1) / 60);
+			let seconds = ((t+1) % 60) > 9 ? (t+1) % 60 : "0"+((t+1) % 60);
+			this.graphctx.fillText(minutes+':'+seconds, this.timeLables[t], this.canvasElement.height-5.5);
 			this.graphctx.moveTo(this.timeLables[t], this.canvasElement.height-15);
 			this.graphctx.lineTo(this.timeLables[t], this.canvasElement.height-20);
 			this.graphctx.stroke();
@@ -551,24 +553,22 @@ function ActivityGraph(canvasElement) {
 		var self = this;
 		this.recordingInProgress = window.setInterval( function() {
 				self.graphPoints.push( [self.dialX, activeCellCount / countCells() * self.graphArea[3]] );
+				self.recordTimer = self.recordTimer + 10;
+				if (self.recordTimer % 1000 == 0) {
+					self.timeLables.push(self.dialX);
+				}
 			} , 10);
-
-		this.timeLabelTimer = window.setInterval( function() { 
-				self.timeLables.push(self.dialX);
-				document.getElementById('timeLabel').innerHTML = self.timeLables[self.timeLables.length-1];
-			} , 1000);
 	}
 
 	this.stopRecord = function() {
 		clearInterval(this.recordingInProgress);
-		clearInterval(this.timeLabelTimer);
 		this.recordingInProgress = false;
 	}
 
 	this.reset = function() {
 		this.stopRecord();
+		this.recordTimer = 0;
 		this.timeLables = [];
-		this.timeLabelTimer = false;
 		this.dialX = this.graphArea[0];
 		this.graphPoints = [];
 	}
