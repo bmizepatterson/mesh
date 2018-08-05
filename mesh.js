@@ -853,7 +853,10 @@ function clickStimulateButton() {
 	document.getElementById("resumeActivity").style.display = "none";
 	Cells[0].stimulate(1);
 	stimulationInProgress = setInterval(function() { Cells[0].stimulate(1); }, 1000);
-	graph.startRecord();
+	// If we're not already recording, then start.`
+	if (!graph.recordingInProgress) {
+		graph.startRecord();		
+	}
 }
 
 function stopStimulating() {
