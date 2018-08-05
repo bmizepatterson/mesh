@@ -549,21 +549,20 @@ function ActivityGraph(canvasElement) {
 
 	this.startRecord = function() {
 		var self = this;
-		this.recordingInProgress = window.setInterval(self.record, 10);
-		this.timeLabelTimer = window.setInterval(function() { 
-			self.timeLables.push(self.dialX);
-			document.getElementById('timeLabel').innerHTML = self.timeLables[self.timeLables.length-1];
-		} , 1000);
+		this.recordingInProgress = window.setInterval( function() {
+				self.graphPoints.push( [self.dialX, activeCellCount / countCells() * self.graphArea[3]] );
+			} , 10);
+
+		this.timeLabelTimer = window.setInterval( function() { 
+				self.timeLables.push(self.dialX);
+				document.getElementById('timeLabel').innerHTML = self.timeLables[self.timeLables.length-1];
+			} , 1000);
 	}
 
 	this.stopRecord = function() {
 		clearInterval(this.recordingInProgress);
 		clearInterval(this.timeLabelTimer);
 		this.recordingInProgress = false;
-	}
-
-	this.record = function() {
-		this.graphPoints.push([this.dialX, activeCellCount / countCells() * this.graphArea[3]]);
 	}
 
 	this.reset = function() {
