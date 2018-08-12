@@ -298,7 +298,11 @@ function Dendrite(originCell = null, destinationCell, startX, startY, endX, endY
 		x2: null,
 		y2: null
 	};
-	this.controlPoint = null;
+	// The control point of the arc, if necessary
+	this.controlPoint = {
+		x: null,
+		y: null
+	};
 	this.arc = null;
 	this.deleted = false;
 	this.highlighted = false;
@@ -329,13 +333,12 @@ function Dendrite(originCell = null, destinationCell, startX, startY, endX, endY
 		// Returns the coordinates in an array [x, y].
 		var x, y, startX;
 		if (this.startY < this.endY) {
-			x = Math.round(this.midpointX + (curveWidth * Math.sin(Math.PI/2 - Math.asin(2*(this.startX-this.midpointX)/this.length))));
-			y = Math.round(this.midpointY + (curveWidth * Math.cos(Math.PI/2 - Math.asin(2*(this.startX-this.midpointX)/this.length))));
+			this.controlPoint.x = Math.round(this.midpointX + (curveWidth * Math.sin(Math.PI/2 - Math.asin(2*(this.startX-this.midpointX)/this.length))));
+			this.controlPoint.y = Math.round(this.midpointY + (curveWidth * Math.cos(Math.PI/2 - Math.asin(2*(this.startX-this.midpointX)/this.length))));
 		} else {
-			x = Math.round(this.midpointX - (curveWidth * Math.sin(Math.PI/2 - Math.asin(2*(this.startX-this.midpointX)/this.length))));
-			y = Math.round(this.midpointY + (curveWidth * Math.cos(Math.PI/2 - Math.asin(2*(this.startX-this.midpointX)/this.length))));
+			this.controlPoint.x = Math.round(this.midpointX - (curveWidth * Math.sin(Math.PI/2 - Math.asin(2*(this.startX-this.midpointX)/this.length))));
+			this.controlPoint.y = Math.round(this.midpointY + (curveWidth * Math.cos(Math.PI/2 - Math.asin(2*(this.startX-this.midpointX)/this.length))));
 		}			
-		this.controlPoint = [x, y];
 		return this.controlPoint;
 	}
 
@@ -349,7 +352,7 @@ function Dendrite(originCell = null, destinationCell, startX, startY, endX, endY
 		var startAngle, endAngle;
 		Ax = this.startX; Ay = this.startY;
 		Bx = this.endX; By = this.endY;
-		Cx = this.getControlPoint()[0]; Cy = this.getControlPoint()[1];
+		Cx = this.getControlPoint().x; Cy = this.getControlPoint().y;
 		Ax2 = Ax*Ax; Ay2 = Ay*Ay; Bx2 = Bx*Bx; By2 = By*By; Cx2 = Cx*Cx; Cy2 = Cy*Cy;
 		if (Ax === Bx) {
 			// We've got a vertical line. The formula for calculating Px returns undefined when Ax==Bx, since 2(Bx-Ax) is the denominator.
@@ -640,7 +643,7 @@ function watch() {
 				let start = Math.round(lastCell.outputDendrites[i].arc[3] / Math.PI * 180 + 90);
 				let end = Math.round(lastCell.outputDendrites[i].arc[4] / Math.PI * 180 + 90);
 				arcInfo += '[' + i + '] (' + lastCell.outputDendrites[i].arc[0] + ', ' + lastCell.outputDendrites[i].arc[1] + ', ' + lastCell.outputDendrites[i].arc[2] + ', ' + start + ', ' + end + ')<br />';
-				controlPoint += '[' + i + '] (' + lastCell.outputDendrites[i].controlPoint[0] + ', ' + lastCell.outputDendrites[i].controlPoint[1] + ')<br />';
+				controlPoint += '[' + i + '] (' + lastCell.outputDendrites[i].controlPoint.x + ', ' + lastCell.outputDendrites[i].controlPoint.y + ')<br />';
 			}
 		}
 		for (let j = 0; j < lastCell.inputDendrites.length; j++) {
