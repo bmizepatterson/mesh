@@ -564,8 +564,8 @@ function ActivityGraph(canvasElement) {
 				point2[0] = point2[0] - 0.5;
 			}
 			this.graphctx.beginPath();
-			this.graphctx.moveTo(point1[0], this.graphArea[1] + this.graphArea[3] - point1[1]);
-			this.graphctx.lineTo(point2[0], this.graphArea[1] + this.graphArea[3] - point2[1]);
+			this.graphctx.moveTo(point1[0], this.graphArea[1] + this.graphArea[3] - point1[1]-1);
+			this.graphctx.lineTo(point2[0], this.graphArea[1] + this.graphArea[3] - point2[1]-1);
 			this.graphctx.stroke();
 			this.graphctx.closePath();
 		}
