@@ -289,9 +289,27 @@ function Dendrite(originCell = null, destinationCell, startX, startY, endX, endY
 	this.length = distance(startX, startY, endX, endY);
 	this.midpointX = (startX + endX) / 2;
 	this.midpointY = (startY + endY) / 2;
-	this.arrowCoords = null;
-	this.controlPoint = null;
-	this.arc = null;
+	// The coordinates of the arrow contain two points (that define the "wings") and the coordinate of the "point" of the arrow.
+	this.arrowCoords = {
+		x1: null,
+		y1: null,
+		pointX: null,
+		pointY: null,
+		x2: null,
+		y2: null
+	};
+	// The control point of the arc, if necessary
+	this.controlPoint = {
+		x: null,
+		y: null
+	};
+	this.arc = {
+		x: null,
+		y: null,
+		radius: null,
+		startAngle: null,
+		endAngle: null
+	};
 	this.deleted = false;
 	this.highlighted = false;
 
@@ -336,14 +354,13 @@ function Dendrite(originCell = null, destinationCell, startX, startY, endX, endY
 
 		// Find the coordinates of the point of the arrow, which lies on the circumference of the destination cell
 		var theta = Math.atan2(this.startY-this.endY, this.startX-this.endX);
-		var Px = Math.round(this.destinationCell.r * Math.cos(theta) + this.endX);
-		var Py = Math.round(this.destinationCell.r * Math.sin(theta) + this.endY);
-	    var angle = Math.atan2(Py-this.startY,Px-this.startX);
-	    var x1 = Math.round(Px-arrowWidth*Math.cos(angle-Math.PI/6));
-	    var y1 = Math.round(Py-arrowWidth*Math.sin(angle-Math.PI/6));
-	    var x2 = Math.round(Px-arrowWidth*Math.cos(angle+Math.PI/6));
-	    var y2 = Math.round(Py-arrowWidth*Math.sin(angle+Math.PI/6));
-		this.arrowCoords = [x1,y1,Px,Py,x2,y2];
+		this.arrowCoords.pointX = Math.round(this.destinationCell.r * Math.cos(theta) + this.endX);
+		this.arrowCoords.pointY = Math.round(this.destinationCell.r * Math.sin(theta) + this.endY);
+	    var angle = Math.atan2(this.arrowCoords.pointY - this.startY, this.arrowCoords.pointX - this.startX);
+	    this.arrowCoords.x1 = Math.round(this.arrowCoords.pointX - arrowWidth * Math.cos(angle - Math.PI/6));
+	    this.arrowCoords.y1 = Math.round(this.arrowCoords.pointY - arrowWidth * Math.sin(angle - Math.PI/6));
+	    this.arrowCoords.x2 = Math.round(this.arrowCoords.pointX - arrowWidth * Math.cos(angle + Math.PI/6));
+	    this.arrowCoords.y2 = Math.round(this.arrowCoords.pointY - arrowWidth * Math.sin(angle + Math.PI/6));
 		return this.arrowCoords;
 	}
 
@@ -353,13 +370,12 @@ function Dendrite(originCell = null, destinationCell, startX, startY, endX, endY
 		// Returns the coordinates in an array [x, y].
 		var x, y, startX;
 		if (this.startY < this.endY) {
-			x = Math.round(this.midpointX + (curveWidth * Math.sin(Math.PI/2 - Math.asin(2*(this.startX-this.midpointX)/this.length))));
-			y = Math.round(this.midpointY + (curveWidth * Math.cos(Math.PI/2 - Math.asin(2*(this.startX-this.midpointX)/this.length))));
+			this.controlPoint.x = Math.round(this.midpointX + (curveWidth * Math.sin(Math.PI/2 - Math.asin(2*(this.startX-this.midpointX)/this.length))));
+			this.controlPoint.y = Math.round(this.midpointY + (curveWidth * Math.cos(Math.PI/2 - Math.asin(2*(this.startX-this.midpointX)/this.length))));
 		} else {
-			x = Math.round(this.midpointX - (curveWidth * Math.sin(Math.PI/2 - Math.asin(2*(this.startX-this.midpointX)/this.length))));
-			y = Math.round(this.midpointY + (curveWidth * Math.cos(Math.PI/2 - Math.asin(2*(this.startX-this.midpointX)/this.length))));
+			this.controlPoint.x = Math.round(this.midpointX - (curveWidth * Math.sin(Math.PI/2 - Math.asin(2*(this.startX-this.midpointX)/this.length))));
+			this.controlPoint.y = Math.round(this.midpointY + (curveWidth * Math.cos(Math.PI/2 - Math.asin(2*(this.startX-this.midpointX)/this.length))));
 		}			
-		this.controlPoint = [x, y];
 		return this.controlPoint;
 	}
 
@@ -373,7 +389,7 @@ function Dendrite(originCell = null, destinationCell, startX, startY, endX, endY
 		var startAngle, endAngle;
 		Ax = this.startX; Ay = this.startY;
 		Bx = this.endX; By = this.endY;
-		Cx = this.getControlPoint()[0]; Cy = this.getControlPoint()[1];
+		Cx = this.getControlPoint().x; Cy = this.getControlPoint().y;
 		Ax2 = Ax*Ax; Ay2 = Ay*Ay; Bx2 = Bx*Bx; By2 = By*By; Cx2 = Cx*Cx; Cy2 = Cy*Cy;
 		if (Ax === Bx) {
 			// We've got a vertical line. The formula for calculating Px returns undefined when Ax==Bx, since 2(Bx-Ax) is the denominator.
@@ -397,12 +413,11 @@ function Dendrite(originCell = null, destinationCell, startX, startY, endX, endY
 			Py = ( ( (Bx-Ax) * (Cx2+Cy2-Bx2-By2) ) - ( (Cx-Bx) * (Bx2+By2-Ax2-Ay2) ) ) / ( (2 * (Cy-By) * (Bx-Ax) ) - (2 * (By-Ay) * (Cx-Bx) ) );
 			Px = ( (Bx2+By2-Ax2-Ay2) - (2 * Py * (By-Ay) ) ) / ( 2 * (Bx-Ax) );
 		}
-		Pr = Math.round(distance(Px, Py, Ax, Ay));
-		Py = Math.round(Py);
-		Px = Math.round(Px);
-		startAngle = Math.atan2(Ay - Py, Ax - Px);
-		endAngle = Math.atan2(By - Py, Bx - Px);
-		this.arc = [Px, Py, Pr, startAngle, endAngle];
+		this.arc.radius = Math.round(distance(Px, Py, Ax, Ay));
+		this.arc.y = Math.round(Py);
+		this.arc.x = Math.round(Px);
+		this.arc.startAngle = Math.atan2(Ay - Py, Ax - Px);
+		this.arc.endAngle = Math.atan2(By - Py, Bx - Px);
 		return this.arc;
 	}
 
@@ -423,7 +438,7 @@ function Dendrite(originCell = null, destinationCell, startX, startY, endX, endY
 		if (loop) {
 			this.getArc();
 			ctx.beginPath();
-			ctx.arc(this.arc[0], this.arc[1], this.arc[2], this.arc[3], this.arc[4]);
+			ctx.arc(this.arc.x, this.arc.y, this.arc.radius, this.arc.startAngle, this.arc.endAngle);
 			ctx.stroke();
 			ctx.closePath();
 		} else {
@@ -442,9 +457,9 @@ function Dendrite(originCell = null, destinationCell, startX, startY, endX, endY
 			// Draw arrow
 		    this.getArrowCoords();
 	    	ctx.beginPath();
-	    	ctx.moveTo(this.arrowCoords[0], this.arrowCoords[1]);
-	    	ctx.lineTo(this.arrowCoords[2], this.arrowCoords[3]);
-	    	ctx.lineTo(this.arrowCoords[4], this.arrowCoords[5]);
+	    	ctx.moveTo(this.arrowCoords.x1, this.arrowCoords.y1);
+	    	ctx.lineTo(this.arrowCoords.pointX, this.arrowCoords.pointY);
+	    	ctx.lineTo(this.arrowCoords.x2, this.arrowCoords.y2);
 	    	ctx.closePath();
 	    	ctx.fill();
 		}	    
@@ -661,15 +676,15 @@ function watch() {
 		var arcInfo = '';
 		for (let i = 0; i < lastCell.outputDendrites.length; i++) {
 			if (lastCell.outputDendrites[i].arc != null) {
-				let start = Math.round(lastCell.outputDendrites[i].arc[3] / Math.PI * 180 + 90);
-				let end = Math.round(lastCell.outputDendrites[i].arc[4] / Math.PI * 180 + 90);
-				arcInfo += '[' + i + '] (' + lastCell.outputDendrites[i].arc[0] + ', ' + lastCell.outputDendrites[i].arc[1] + ', ' + lastCell.outputDendrites[i].arc[2] + ', ' + start + ', ' + end + ')<br />';
-				controlPoint += '[' + i + '] (' + lastCell.outputDendrites[i].controlPoint[0] + ', ' + lastCell.outputDendrites[i].controlPoint[1] + ')<br />';
+				let start = Math.round(lastCell.outputDendrites[i].arc.startAngle / Math.PI * 180 + 90);
+				let end = Math.round(lastCell.outputDendrites[i].arc.endAngle / Math.PI * 180 + 90);
+				arcInfo += '[' + i + '] (' + lastCell.outputDendrites[i].arc.x + ', ' + lastCell.outputDendrites[i].arc.y + ', ' + lastCell.outputDendrites[i].arc.radius + ', ' + start + ', ' + end + ')<br />';
+				controlPoint += '[' + i + '] (' + lastCell.outputDendrites[i].controlPoint.x + ', ' + lastCell.outputDendrites[i].controlPoint.y + ')<br />';
 			}
 		}
 		for (let j = 0; j < lastCell.inputDendrites.length; j++) {
 			if (lastCell.inputDendrites[j].arrowCoords != null) {
-				arrowInfo += '[' + j + '] (' + lastCell.inputDendrites[j].arrowCoords[0] + ', ' + lastCell.inputDendrites[j].arrowCoords[1] + '), (' + lastCell.inputDendrites[j].arrowCoords[2] + ', ' + lastCell.inputDendrites[j].arrowCoords[3] + '), (' + lastCell.inputDendrites[j].arrowCoords[4] + ', ' + lastCell.inputDendrites[j].arrowCoords[5] + ')<br />';
+				arrowInfo += '[' + j + '] (' + lastCell.inputDendrites[j].arrowCoords.x1 + ', ' + lastCell.inputDendrites[j].arrowCoords.y1 + '), (' + lastCell.inputDendrites[j].arrowCoords.pointX + ', ' + lastCell.inputDendrites[j].arrowCoords.pointY + '), (' + lastCell.inputDendrites[j].arrowCoords.x2 + ', ' + lastCell.inputDendrites[j].arrowCoords.y2 + ')<br />';
 			}
 		}
 	}
