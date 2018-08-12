@@ -303,7 +303,13 @@ function Dendrite(originCell = null, destinationCell, startX, startY, endX, endY
 		x: null,
 		y: null
 	};
-	this.arc = null;
+	this.arc = {
+		x: null,
+		y: null,
+		radius: null,
+		startAngle: null,
+		endAngle: null
+	};
 	this.deleted = false;
 	this.highlighted = false;
 
@@ -376,12 +382,11 @@ function Dendrite(originCell = null, destinationCell, startX, startY, endX, endY
 			Py = ( ( (Bx-Ax) * (Cx2+Cy2-Bx2-By2) ) - ( (Cx-Bx) * (Bx2+By2-Ax2-Ay2) ) ) / ( (2 * (Cy-By) * (Bx-Ax) ) - (2 * (By-Ay) * (Cx-Bx) ) );
 			Px = ( (Bx2+By2-Ax2-Ay2) - (2 * Py * (By-Ay) ) ) / ( 2 * (Bx-Ax) );
 		}
-		Pr = Math.round(distance(Px, Py, Ax, Ay));
-		Py = Math.round(Py);
-		Px = Math.round(Px);
-		startAngle = Math.atan2(Ay - Py, Ax - Px);
-		endAngle = Math.atan2(By - Py, Bx - Px);
-		this.arc = [Px, Py, Pr, startAngle, endAngle];
+		this.arc.radius = Math.round(distance(Px, Py, Ax, Ay));
+		this.arc.y = Math.round(Py);
+		this.arc.x = Math.round(Px);
+		this.arc.startAngle = Math.atan2(Ay - Py, Ax - Px);
+		this.arc.endAngle = Math.atan2(By - Py, Bx - Px);
 		return this.arc;
 	}
 
@@ -402,7 +407,7 @@ function Dendrite(originCell = null, destinationCell, startX, startY, endX, endY
 		if (loop) {
 			this.getArc();
 			ctx.beginPath();
-			ctx.arc(this.arc[0], this.arc[1], this.arc[2], this.arc[3], this.arc[4]);
+			ctx.arc(this.arc.x, this.arc.y, this.arc.radius, this.arc.startAngle, this.arc.endAngle);
 			ctx.stroke();
 			ctx.closePath();
 		} else {
@@ -640,9 +645,9 @@ function watch() {
 		var arcInfo = '';
 		for (let i = 0; i < lastCell.outputDendrites.length; i++) {
 			if (lastCell.outputDendrites[i].arc != null) {
-				let start = Math.round(lastCell.outputDendrites[i].arc[3] / Math.PI * 180 + 90);
-				let end = Math.round(lastCell.outputDendrites[i].arc[4] / Math.PI * 180 + 90);
-				arcInfo += '[' + i + '] (' + lastCell.outputDendrites[i].arc[0] + ', ' + lastCell.outputDendrites[i].arc[1] + ', ' + lastCell.outputDendrites[i].arc[2] + ', ' + start + ', ' + end + ')<br />';
+				let start = Math.round(lastCell.outputDendrites[i].arc.startAngle / Math.PI * 180 + 90);
+				let end = Math.round(lastCell.outputDendrites[i].arc.endAngle / Math.PI * 180 + 90);
+				arcInfo += '[' + i + '] (' + lastCell.outputDendrites[i].arc.x + ', ' + lastCell.outputDendrites[i].arc.y + ', ' + lastCell.outputDendrites[i].arc.radius + ', ' + start + ', ' + end + ')<br />';
 				controlPoint += '[' + i + '] (' + lastCell.outputDendrites[i].controlPoint.x + ', ' + lastCell.outputDendrites[i].controlPoint.y + ')<br />';
 			}
 		}
