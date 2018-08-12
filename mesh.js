@@ -295,7 +295,7 @@ function Dendrite(originCell = null, destinationCell, startX, startY, endX, endY
 	this.deleted = false;
 	this.highlighted = false;
 
-	this.getArrowCoords = function(loop) {
+	this.getArrowCoords = function(loop = false) {
 		// Calculate the coordinates for each side of the arrow
 		// Uses global arrowWidth variable
 		// Returns three coordinates in an array of six elements: x1, y1, pointX, pointY, x2, y2
@@ -303,6 +303,37 @@ function Dendrite(originCell = null, destinationCell, startX, startY, endX, endY
 			console.log('Unable to calculate arrow coordinates of dendrite #'+this.id+'. (Arrow width cannot be zero.)');
 			return false;
 		}
+		if (loop) {
+			//Calculate line tangent to the curve
+			var self = this;
+		    var pointDistance = {
+		        x: self.arc[0],
+		        y: self.arc[1],
+		        length: function () {
+		            return Math.sqrt(this.x * this.x + this.y * this.y)
+		        }
+		    }
+
+		    var radius = this.arc[2];
+		    //Alpha
+		    var a = Math.asin(radius / pointDistance.length());
+		    //Beta
+		    var b = Math.atan2(pointDistance.y, pointDistance.x);
+		    //Tangent angle
+		    var t = b - a;
+		    //Tangent points
+		    var T1 = {
+		        x: this.arc[0] + radius * Math.sin(t),
+		        y: this.arc[1] + radius * -Math.cos(t)
+		    };
+
+		    t = b + a;
+		    var T2 = {
+		        x: this.arc[0] + radius * -Math.sin(t),
+		        y: this.arc[1] + radius * Math.cos(t)
+		    }
+		}
+
 		// Find the coordinates of the point of the arrow, which lies on the circumference of the destination cell
 		var theta = Math.atan2(this.startY-this.endY, this.startX-this.endX);
 		var Px = Math.round(this.destinationCell.r * Math.cos(theta) + this.endX);
