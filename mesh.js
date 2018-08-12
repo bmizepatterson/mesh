@@ -316,18 +316,19 @@ function Dendrite(originCell = null, destinationCell, startX, startY, endX, endY
 	this.getArrowCoords = function(loop = false) {
 		// Calculate the coordinates for each side of the arrow
 		// Uses global arrowWidth variable
-		// Returns three coordinates in an array of six elements: x1, y1, pointX, pointY, x2, y2
 		if (arrowWidth === 0) {
 			console.log('Unable to calculate arrow coordinates of dendrite #'+this.id+'. (Arrow width cannot be zero.)');
 			return false;
 		}
-		var referenceLine = {
-			startX: this.startX,
-			startY: this.startY,
-			endX: this.endX,
-			endY: this.endY,
-		};
+		var angle;
 		if (loop) {
+			// Use a reference line tangent to the arc circle to draw the arrow
+			var referenceLine = {
+				startX: this.startX,
+				startY: this.startY,
+				endX: this.endX,
+				endY: this.endY,
+			};
 			// Find the points of intersection between the destination cell circle and the arc circle
 			var intersections = intersectTwoCircles(this.destinationCell.x, this.destinationCell.y, this.destinationCell.r, this.arc.x, this.arc.y, this.arc.radius);
 			referenceLine.endX = intersections[1][0];
@@ -338,13 +339,14 @@ function Dendrite(originCell = null, destinationCell, startX, startY, endX, endY
 			referenceLine.startY = referenceLine.endY - dy;
 			this.arrowCoords.pointX = referenceLine.endX;
 			this.arrowCoords.pointY = referenceLine.endY;
+	    	angle = Math.atan2(this.arrowCoords.pointY - referenceLine.startY, this.arrowCoords.pointX - referenceLine.startX);
 		} else {
-			var theta = Math.atan2(referenceLine.startY - referenceLine.endY, referenceLine.startX - referenceLine.endX);
-			this.arrowCoords.pointX = Math.round(this.destinationCell.r * Math.cos(theta) + referenceLine.endX);
-			this.arrowCoords.pointY = Math.round(this.destinationCell.r * Math.sin(theta) + referenceLine.endY);
+			var theta = Math.atan2(this.startY - this.endY, this.startX - this.endX);
+			this.arrowCoords.pointX = Math.round(this.destinationCell.r * Math.cos(theta) + this.endX);
+			this.arrowCoords.pointY = Math.round(this.destinationCell.r * Math.sin(theta) + this.endY);
+	    	angle = Math.atan2(this.arrowCoords.pointY - this.startY, this.arrowCoords.pointX - this.startX);
 		}
 		// Find the coordinates of the point of the arrow, which lies on the circumference of the destination cell
-	    var angle = Math.atan2(this.arrowCoords.pointY - referenceLine.startY, this.arrowCoords.pointX - referenceLine.startX);
 	    this.arrowCoords.x1 = Math.round(this.arrowCoords.pointX - arrowWidth * Math.cos(angle - Math.PI/6));
 	    this.arrowCoords.y1 = Math.round(this.arrowCoords.pointY - arrowWidth * Math.sin(angle - Math.PI/6));
 	    this.arrowCoords.x2 = Math.round(this.arrowCoords.pointX - arrowWidth * Math.cos(angle + Math.PI/6));
@@ -356,7 +358,6 @@ function Dendrite(originCell = null, destinationCell, startX, startY, endX, endY
 	this.getControlPoint = function() {
 		// Calculate the coordinates of the control point needed for drawing the arc between two cells in a lopp
 		// Uses global curveWidth variable
-		// Returns the coordinates in an array [x, y].
 		var x, y, startX;
 		if (this.startY < this.endY) {
 			this.controlPoint.x = Math.round(this.midpointX + (curveWidth * Math.sin(Math.PI/2 - Math.asin(2*(this.startX-this.midpointX)/this.length))));
@@ -429,7 +430,6 @@ function Dendrite(originCell = null, destinationCell, startX, startY, endX, endY
 			ctx.beginPath();
 			ctx.arc(this.arc.x, this.arc.y, this.arc.radius, this.arc.startAngle, this.arc.endAngle);
 			ctx.stroke();
-			ctx.closePath();
 		} else {
 			var apparentStartX = this.startX; apparentStartY = this.startY;
 			var apparentEndX = this.endX; apparentEndY = this.endY;
@@ -442,16 +442,15 @@ function Dendrite(originCell = null, destinationCell, startX, startY, endX, endY
 			ctx.moveTo(apparentStartX, apparentStartY);
 		    ctx.lineTo(apparentEndX, apparentEndY);
 		    ctx.stroke();
-		    ctx.closePath();
 		}	    
 		// Draw arrow
-	    this.getArrowCoords(loop);
-    	ctx.beginPath();
-    	ctx.moveTo(this.arrowCoords.x1, this.arrowCoords.y1);
-    	ctx.lineTo(this.arrowCoords.pointX, this.arrowCoords.pointY);
-    	ctx.lineTo(this.arrowCoords.x2, this.arrowCoords.y2);
-    	ctx.closePath();
-    	ctx.fill();
+	    if (this.getArrowCoords(loop)) {
+	    	ctx.beginPath();
+	    	ctx.moveTo(this.arrowCoords.x1, this.arrowCoords.y1);
+	    	ctx.lineTo(this.arrowCoords.pointX, this.arrowCoords.pointY);
+	    	ctx.lineTo(this.arrowCoords.x2, this.arrowCoords.y2);
+	    	ctx.fill();
+	    }
 	}
 
 	this.delete = function() {
