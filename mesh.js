@@ -289,7 +289,15 @@ function Dendrite(originCell = null, destinationCell, startX, startY, endX, endY
 	this.length = distance(startX, startY, endX, endY);
 	this.midpointX = (startX + endX) / 2;
 	this.midpointY = (startY + endY) / 2;
-	this.arrowCoords = null;
+	// The coordinates of the arrow contain two points (that define the "wings") and the coordinate of the "point" of the arrow.
+	this.arrowCoords = {
+		x1: null,
+		y1: null,
+		pointX: null,
+		pointY: null,
+		x2: null,
+		y2: null
+	};
 	this.controlPoint = null;
 	this.arc = null;
 	this.deleted = false;
@@ -305,14 +313,13 @@ function Dendrite(originCell = null, destinationCell, startX, startY, endX, endY
 		}
 		// Find the coordinates of the point of the arrow, which lies on the circumference of the destination cell
 		var theta = Math.atan2(this.startY-this.endY, this.startX-this.endX);
-		var Px = Math.round(this.destinationCell.r * Math.cos(theta) + this.endX);
-		var Py = Math.round(this.destinationCell.r * Math.sin(theta) + this.endY);
-	    var angle = Math.atan2(Py-this.startY,Px-this.startX);
-	    var x1 = Math.round(Px-arrowWidth*Math.cos(angle-Math.PI/6));
-	    var y1 = Math.round(Py-arrowWidth*Math.sin(angle-Math.PI/6));
-	    var x2 = Math.round(Px-arrowWidth*Math.cos(angle+Math.PI/6));
-	    var y2 = Math.round(Py-arrowWidth*Math.sin(angle+Math.PI/6));
-		this.arrowCoords = [x1,y1,Px,Py,x2,y2];
+		this.arrowCoords.pointX = Math.round(this.destinationCell.r * Math.cos(theta) + this.endX);
+		this.arrowCoords.pointY = Math.round(this.destinationCell.r * Math.sin(theta) + this.endY);
+	    var angle = Math.atan2(this.arrowCoords.pointY - this.startY, this.arrowCoords.pointX - this.startX);
+	    this.arrowCoords.x1 = Math.round(this.arrowCoords.pointX - arrowWidth * Math.cos(angle - Math.PI/6));
+	    this.arrowCoords.y1 = Math.round(this.arrowCoords.pointY - arrowWidth * Math.sin(angle - Math.PI/6));
+	    this.arrowCoords.x2 = Math.round(this.arrowCoords.pointX - arrowWidth * Math.cos(angle + Math.PI/6));
+	    this.arrowCoords.y2 = Math.round(this.arrowCoords.pointY - arrowWidth * Math.sin(angle + Math.PI/6));
 		return this.arrowCoords;
 	}
 
@@ -411,9 +418,9 @@ function Dendrite(originCell = null, destinationCell, startX, startY, endX, endY
 			// Draw arrow
 		    this.getArrowCoords();
 	    	ctx.beginPath();
-	    	ctx.moveTo(this.arrowCoords[0], this.arrowCoords[1]);
-	    	ctx.lineTo(this.arrowCoords[2], this.arrowCoords[3]);
-	    	ctx.lineTo(this.arrowCoords[4], this.arrowCoords[5]);
+	    	ctx.moveTo(this.arrowCoords.x1, this.arrowCoords.y1);
+	    	ctx.lineTo(this.arrowCoords.pointX, this.arrowCoords.pointY);
+	    	ctx.lineTo(this.arrowCoords.x2, this.arrowCoords.y2);
 	    	ctx.closePath();
 	    	ctx.fill();
 		}	    
@@ -638,7 +645,7 @@ function watch() {
 		}
 		for (let j = 0; j < lastCell.inputDendrites.length; j++) {
 			if (lastCell.inputDendrites[j].arrowCoords != null) {
-				arrowInfo += '[' + j + '] (' + lastCell.inputDendrites[j].arrowCoords[0] + ', ' + lastCell.inputDendrites[j].arrowCoords[1] + '), (' + lastCell.inputDendrites[j].arrowCoords[2] + ', ' + lastCell.inputDendrites[j].arrowCoords[3] + '), (' + lastCell.inputDendrites[j].arrowCoords[4] + ', ' + lastCell.inputDendrites[j].arrowCoords[5] + ')<br />';
+				arrowInfo += '[' + j + '] (' + lastCell.inputDendrites[j].arrowCoords.x1 + ', ' + lastCell.inputDendrites[j].arrowCoords.y1 + '), (' + lastCell.inputDendrites[j].arrowCoords.pointX + ', ' + lastCell.inputDendrites[j].arrowCoords.pointY + '), (' + lastCell.inputDendrites[j].arrowCoords.x2 + ', ' + lastCell.inputDendrites[j].arrowCoords.y2 + ')<br />';
 			}
 		}
 	}
