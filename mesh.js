@@ -664,6 +664,13 @@ function rotate(x, y, cx, cy, angle) {
 	return [newX, newY];
 }
 
+function drawPoint(x,y,style="red") {
+	ctx.beginPath();
+	ctx.arc(x, y, 5, 0, 2*Math.PI);
+	ctx.fillStyle = style;
+	ctx.fill();
+}
+
 function watch() {
 	document.getElementById("stimulateCheck").innerHTML = stimulationInProgress;
 	arcInfo = '';
