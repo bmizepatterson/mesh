@@ -361,21 +361,6 @@ function Dendrite(originCell = null, destinationCell, startX, startY, endX, endY
 		
 	}
 
-	this.getTangentPoint = function() {
-		// Calculate the coordiantes of the point external to the arc circle through with the tangent reference line will pass
-		var tangentPoint = {
-			x: null,
-			y: null
-		}
-		if (this.startY < this.endY) {
-			tangentPoint.x = Math.round(this.midpointX + (curveWidth * Math.sin(Math.PI/2 - Math.asin(2*(this.startX-this.midpointX)/this.length))));
-			tangentPoint.y = Math.round(this.midpointY + (curveWidth * Math.cos(Math.PI/2 - Math.asin(2*(this.startX-this.midpointX)/this.length))));
-		} else {
-			tangentPoint.x = Math.round(this.midpointX - (curveWidth * Math.sin(Math.PI/2 - Math.asin(2*(this.startX-this.midpointX)/this.length))));
-			tangentPoint.y = Math.round(this.midpointY + (curveWidth * Math.cos(Math.PI/2 - Math.asin(2*(this.startX-this.midpointX)/this.length))));
-		}
-	}
-
 	this.getControlPoint = function() {
 		// Calculate the coordinates of the control point needed for drawing the arc between two cells in a lopp
 		// Uses global curveWidth variable
