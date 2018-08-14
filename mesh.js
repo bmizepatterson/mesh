@@ -322,21 +322,27 @@ function Dendrite(originCell = null, destinationCell, startX, startY, endX, endY
 		}
 		var angle;
 		if (loop) {
-			// Use a reference line tangent to the arc circle to draw the arrow
-			var referenceLine = {
-				startX: this.startX,
-				startY: this.startY,
-				endX: this.endX,
-				endY: this.endY,
-			};
 			// Find the points of intersection between the destination cell circle and the arc circle
 			var intersections = intersectTwoCircles(this.destinationCell.x, this.destinationCell.y, this.destinationCell.r, this.arc.x, this.arc.y, this.arc.radius);
-			referenceLine.endX = intersections[1][0];
-			referenceLine.endY = intersections[1][1];
-			var dx = this.destinationCell.x - referenceLine.endX;
-			var dy = this.destinationCell.y - referenceLine.endY;
-			referenceLine.startX = referenceLine.endX - dx;
-			referenceLine.startY = referenceLine.endY - dy;
+			// Use a reference line tangent to the arc circle to draw the arrow
+			var referenceLine = {
+				startX: null,
+				startY: null,
+				endX: intersections[1][0],
+				endY: intersections[1][1]
+			};
+			// The slope of the tangent line is equal to the negative reciprocal of the slope of the arc radius.
+			// Use this slope to calculate a sample (x,y) for an endpoint to the tangent line.
+			var arcRadiusSlope = (referenceLine.endY - this.arc.y) / (referenceLine.endX - this.arc.x);
+			var tangentSlope = -1 / arcRadiusSlope;
+
+			referenceLine.startY = referenceLine.endY - tangentSlope * 50;
+			referenceLine.startX = referenceLine.endX - 1 * 50;
+			ctx.beginPath();
+			ctx.moveTo(referenceLine.startX, referenceLine.startY);
+			ctx.lineTo(referenceLine.endX, referenceLine.endY);
+			ctx.stroke();
+
 			this.arrowCoords.pointX = referenceLine.endX;
 			this.arrowCoords.pointY = referenceLine.endY;
 	    	angle = Math.atan2(this.arrowCoords.pointY - referenceLine.startY, this.arrowCoords.pointX - referenceLine.startX);
@@ -346,7 +352,7 @@ function Dendrite(originCell = null, destinationCell, startX, startY, endX, endY
 			this.arrowCoords.pointY = Math.round(this.destinationCell.r * Math.sin(theta) + this.endY);
 	    	angle = Math.atan2(this.arrowCoords.pointY - this.startY, this.arrowCoords.pointX - this.startX);
 		}
-		// Find the coordinates of the point of the arrow, which lies on the circumference of the destination cell
+		// Find the coordinates of the endpoints of the sides of the arrow
 	    this.arrowCoords.x1 = Math.round(this.arrowCoords.pointX - arrowWidth * Math.cos(angle - Math.PI/6));
 	    this.arrowCoords.y1 = Math.round(this.arrowCoords.pointY - arrowWidth * Math.sin(angle - Math.PI/6));
 	    this.arrowCoords.x2 = Math.round(this.arrowCoords.pointX - arrowWidth * Math.cos(angle + Math.PI/6));
@@ -355,10 +361,24 @@ function Dendrite(originCell = null, destinationCell, startX, startY, endX, endY
 		
 	}
 
+	this.getTangentPoint = function() {
+		// Calculate the coordiantes of the point external to the arc circle through with the tangent reference line will pass
+		var tangentPoint = {
+			x: null,
+			y: null
+		}
+		if (this.startY < this.endY) {
+			tangentPoint.x = Math.round(this.midpointX + (curveWidth * Math.sin(Math.PI/2 - Math.asin(2*(this.startX-this.midpointX)/this.length))));
+			tangentPoint.y = Math.round(this.midpointY + (curveWidth * Math.cos(Math.PI/2 - Math.asin(2*(this.startX-this.midpointX)/this.length))));
+		} else {
+			tangentPoint.x = Math.round(this.midpointX - (curveWidth * Math.sin(Math.PI/2 - Math.asin(2*(this.startX-this.midpointX)/this.length))));
+			tangentPoint.y = Math.round(this.midpointY + (curveWidth * Math.cos(Math.PI/2 - Math.asin(2*(this.startX-this.midpointX)/this.length))));
+		}
+	}
+
 	this.getControlPoint = function() {
 		// Calculate the coordinates of the control point needed for drawing the arc between two cells in a lopp
 		// Uses global curveWidth variable
-		var x, y, startX;
 		if (this.startY < this.endY) {
 			this.controlPoint.x = Math.round(this.midpointX + (curveWidth * Math.sin(Math.PI/2 - Math.asin(2*(this.startX-this.midpointX)/this.length))));
 			this.controlPoint.y = Math.round(this.midpointY + (curveWidth * Math.cos(Math.PI/2 - Math.asin(2*(this.startX-this.midpointX)/this.length))));
