@@ -92,12 +92,15 @@ button {
 	padding: 8px 8px 4px 8px;
 	float:left;
 }
-.meshPanel table {
+.settingstable {
 	background-color: #fff;
 }
 .w3-table.compact td {
 	padding-top:4px;
 	padding-bottom:4px;
+}
+@media (max-width:993px) {
+	.meshPanel{margin-top:20px;}
 }
 @media (max-width:800px) {
 	.w3-mobile{display:block;width:100%!important;float:none;}
