@@ -335,14 +335,8 @@ function Dendrite(originCell = null, destinationCell, startX, startY, endX, endY
 			// Use this slope to calculate a sample (x,y) for an endpoint to the tangent line.
 			var arcRadiusSlope = (referenceLine.endY - this.arc.y) / (referenceLine.endX - this.arc.x);
 			var tangentSlope = -1 / arcRadiusSlope;
-
-			referenceLine.startY = referenceLine.endY - tangentSlope * 50;
-			referenceLine.startX = referenceLine.endX - 1 * 50;
-			ctx.beginPath();
-			ctx.moveTo(referenceLine.startX, referenceLine.startY);
-			ctx.lineTo(referenceLine.endX, referenceLine.endY);
-			ctx.stroke();
-
+			referenceLine.startY = referenceLine.endY > this.arc.y ? referenceLine.endY + tangentSlope : referenceLine.endY - tangentSlope;
+			referenceLine.startX = referenceLine.endY > this.arc.y ? referenceLine.endX + 1 : referenceLine.endX - 1;
 			this.arrowCoords.pointX = referenceLine.endX;
 			this.arrowCoords.pointY = referenceLine.endY;
 	    	angle = Math.atan2(this.arrowCoords.pointY - referenceLine.startY, this.arrowCoords.pointX - referenceLine.startX);
